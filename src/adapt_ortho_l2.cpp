@@ -348,9 +348,14 @@ void L2OrthoHP::calc_projection_errors(Element* e, int order, Solution* rsln,
   }
 }
 
+struct Cand
+{
+  double error;
+  int dofs, split, p[4];
+};
 
 void L2OrthoHP::get_optimal_refinement(Element* e, int order, Solution* rsln, int& split, int p[4],
-                                       bool h_only, bool iso_only, int max_order)
+                                       bool h_only, bool iso_only, double conv_exp, int max_order)
 
 {
   int i, j, k, n = 0;
@@ -368,13 +373,8 @@ void L2OrthoHP::get_optimal_refinement(Element* e, int order, Solution* rsln, in
     max_order = std::min( max_order, (20 - e->iro_cache)/2 - 2); // user specified
 
 
-  struct Cand
-  {
-    double error;
-    int dofs, split, p[4];
-  };
-  Cand cand[maxcand];
-
+  AUTOLA_CL(Cand, cand, maxcand);
+  
   #define make_p_cand(q) { \
     assert(n < maxcand);   \
     cand[n].split = -1; \
@@ -486,8 +486,8 @@ void L2OrthoHP::get_optimal_refinement(Element* e, int order, Solution* rsln, in
 
     if (!i || c->error <= cand[0].error)
     {
-      avg += log10(c->error);
-      dev += sqr(log10(c->error));
+      avg += log(c->error);
+      dev += sqr(log(c->error));
       k++;
     }
   }
@@ -500,9 +500,11 @@ void L2OrthoHP::get_optimal_refinement(Element* e, int order, Solution* rsln, in
   double score, maxscore = 0.0;
   for (i = 1; i < n; i++)
   {
-    if ((log10(cand[i].error) < avg + dev) && (cand[i].dofs > cand[0].dofs))
+    if ((log(cand[i].error) < avg + dev) && (cand[i].dofs > cand[0].dofs))
     {
-      score = (log10(cand[0].error) - log10(cand[i].error)) / (cand[i].dofs - cand[0].dofs);
+      score = (log(cand[0].error) - log(cand[i].error)) / 
+	       //(pow(cand[i].dofs, conv_exp) - pow(cand[0].dofs, conv_exp));
+               pow(cand[i].dofs - cand[0].dofs, conv_exp);
       if (score > maxscore) { maxscore = score; imax = i; }
     }
   }
@@ -518,7 +520,7 @@ void L2OrthoHP::get_optimal_refinement(Element* e, int order, Solution* rsln, in
 
 //// adapt /////////////////////////////////////////////////////////////////////////////////////////
 
-void L2OrthoHP::adapt(double thr, int strat, bool h_only, bool iso_only, int max_order)
+void L2OrthoHP::adapt(double thr, int strat, bool h_only, bool iso_only, double conv_exp, int max_order)
 {
 
   if (!have_errors)
@@ -561,10 +563,12 @@ void L2OrthoHP::adapt(double thr, int strat, bool h_only, bool iso_only, int max
     if (h_only && iso_only)
       p[0] = p[1] = p[2] = p[3] = current;
     else
-      get_optimal_refinement(e, current, rsln[comp], split, p, h_only, iso_only, max_order);
+      get_optimal_refinement(e, current, rsln[comp], split, p, h_only, iso_only, conv_exp, max_order);
 
-    if (split < 0)
+    //apply found division
+    if (split < 0) {
       spaces[comp]->set_element_order(id, p[0]);
+    }
     else if (split == 0) {
       mesh[comp]->refine_element(id);
       for (j = 0; j < 4; j++)
@@ -754,8 +758,8 @@ double L2OrthoHP::calc_error_n(int n, ...)
   va_end(ap);
 
   // prepare multi-mesh traversal and error arrays
-  Mesh* meshes[2*num];
-  Transformable* tr[2*num];
+  AUTOLA_OR(Mesh*, meshes, 2*num);
+  AUTOLA_OR(Transformable*, tr, 2*num);
   Traverse trav;
   nact = 0;
   for (i = 0; i < num; i++)
@@ -774,7 +778,7 @@ double L2OrthoHP::calc_error_n(int n, ...)
   }
 
   double total_norm = 0.0;
-  double norms[num];
+  AUTOLA_OR(double, norms, num);
   memset(norms, 0, num*sizeof(double));
   double total_error = 0.0;
   if (esort != NULL) delete [] esort;

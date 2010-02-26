@@ -313,7 +313,7 @@ class SymPyDocTests(object):
 
         rel_name = filename[len(self._root_dir)+1:]
         module = os.path.splitext(rel_name.replace('/', '.'))[0]
-        setup_pprint()
+        #setup_pprint()
         try:
             module = doctest._normalize_module(module)
             tests = doctest.DocTestFinder().find(module)
@@ -326,7 +326,8 @@ class SymPyDocTests(object):
         self._reporter.entering_filename(filename, len(tests))
         for test in tests:
             assert len(test.examples) != 0
-            runner = doctest.DocTestRunner()
+            runner = doctest.DocTestRunner(optionflags=doctest.ELLIPSIS | \
+                    doctest.NORMALIZE_WHITESPACE)
             old = sys.stdout
             new = StringIO()
             sys.stdout = new
@@ -439,7 +440,7 @@ class PyTestReporter(Reporter):
     def root_dir(self, dir):
         self._root_dir = dir
 
-    def write(self, text, color="", align="left", width=80):
+    def write(self, text, color="", align="left", width=77):
         """
         Prints a text on the screen.
 
@@ -506,7 +507,7 @@ class PyTestReporter(Reporter):
         self._write_pos %= width
 
     def write_center(self, text, delim="="):
-        width = 80
+        width = 77
         if text != "":
             text = " %s " % text
         idx = (width-len(text)) // 2

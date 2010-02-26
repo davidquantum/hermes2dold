@@ -19,13 +19,13 @@
 // h-adaptivity via the ADAPT_TYPE option, and compare the multi-mesh vs. single-mesh
 // using the MULTI parameter.
 
-const int P_INIT = 1;            // Initial polynomial degree of all mesh elements.
+const int P_INIT = 2;            // Initial polynomial degree of all mesh elements.
 const bool MULTI = true;         // MULTI = true  ... use multi-mesh,
                                  // MULTI = false ... use single-mesh.
                                  // Note: In the single mesh option, the meshes are
                                  // forced to be geometrically the same but the
                                  // polynomial degrees can still vary.
-const bool SAME_ORDERS = true;   // SAME_ORDERS = true ... when single-mesh is used,
+const bool SAME_ORDERS = false;  // SAME_ORDERS = true ... when single-mesh is used,
                                  // this forces the meshes for all components to be
                                  // identical, including the polynomial degrees of
                                  // corresponding elements. When multi-mesh is used,
@@ -56,10 +56,12 @@ const int MESH_REGULARITY = -1;  // Maximum allowed level of hanging nodes:
                                  // MESH_REGULARITY = 2 ... at most two-level hanging nodes, etc.
                                  // Note that regular meshes are not supported, this is due to
                                  // their notoriously bad performance.
+const double CONV_EXP = 1.0;     // Default value is 1.0. This parameter influences the selection of 
+                                 // cancidates in hp-adaptivity. See get_optimal_refinement() for details.
 const int MAX_ORDER = 10;        // Maximum allowed element degree
-const double ERR_STOP = 0.5;    // Stopping criterion for adaptivity (rel. error tolerance between the
+const double ERR_STOP = 0.01;    // Stopping criterion for adaptivity (rel. error tolerance between the
                                  // fine mesh and coarse mesh solution in percent).
-const int NDOF_STOP = 40000;     // Adaptivity process stops when the number of degrees of freedom grows over
+const int NDOF_STOP = 60000;     // Adaptivity process stops when the number of degrees of freedom grows over
                                  // this limit. This is mainly to prevent h-adaptivity to go on forever.
 
 // problem constants
@@ -151,7 +153,7 @@ int main(int argc, char* argv[])
 
   // enumerate basis functions
   int ndofs = xdisp.assign_dofs();
-  ydisp.assign_dofs(ndofs);
+  ndofs += ydisp.assign_dofs(ndofs);
 
   // initialize the weak formulation
   WeakForm wf(2);
@@ -185,7 +187,7 @@ int main(int argc, char* argv[])
     begin_time();
 
     //calculating the number of degrees of freedom
-    int ndofs = xdisp.assign_dofs();
+    ndofs = xdisp.assign_dofs();
     ndofs += ydisp.assign_dofs(ndofs);
     printf("xdof=%d, ydof=%d\n", xdisp.get_num_dofs(), ydisp.get_num_dofs());
 
@@ -222,7 +224,7 @@ int main(int argc, char* argv[])
     hp.set_biform(1, 1, bilinear_form_1_1<scalar, scalar>, bilinear_form_1_1<Ord, Ord>);
     double err_est = hp.calc_error_2(&x_sln_coarse, &y_sln_coarse, &x_sln_fine, &y_sln_fine) * 100;
 
-    info("\nEstimate of error: %g%%", err_est);
+    info("Estimate of error: %g%%", err_est);
 
     // time measurement
     cpu += end_time();
@@ -238,7 +240,7 @@ int main(int argc, char* argv[])
     // if err_est too large, adapt the mesh
     if (err_est < ERR_STOP) done = true;
     else {
-      hp.adapt(THRESHOLD, STRATEGY, ADAPT_TYPE, ISO_ONLY, MESH_REGULARITY, MAX_ORDER, SAME_ORDERS);
+      hp.adapt(THRESHOLD, STRATEGY, ADAPT_TYPE, ISO_ONLY, MESH_REGULARITY, CONV_EXP, MAX_ORDER, SAME_ORDERS);
       ndofs = xdisp.assign_dofs();
       ndofs += ydisp.assign_dofs(ndofs);
       if (ndofs >= NDOF_STOP) done = true;
@@ -254,7 +256,7 @@ int main(int argc, char* argv[])
   sview.set_min_max_range(0, 3e4);
   sview.show(&stress_fine);
 
-  // wait for keypress or mouse input
-  View::wait("Waiting for keyboard or mouse input.");
+  // wait for all views to be closed
+  View::wait("Waiting for all views to be closed.");
   return 0;
 }

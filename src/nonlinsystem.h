@@ -29,12 +29,14 @@ class MeshFunction;
 ///
 ///
 ///
-class NonlinSystem : public LinSystem
+class PUBLIC_API NonlinSystem : public LinSystem 
 {
 public:
 
   /// Initializes the class and sets zero initial coefficient vector.
   NonlinSystem(WeakForm* wf, Solver* solver);
+
+  virtual void free();
 
   /// Sets the initial coefficient vector so that it represents the given function(s).
   /// You can pass pointer(s) to Solution(s) or to a Filter(s).
@@ -45,6 +47,14 @@ public:
 
   void set_ic(MeshFunction* fn1, MeshFunction* fn2, Solution* result1, Solution* result2, int proj_norm = 1)
     {  set_ic_n(proj_norm, 2, fn1, fn2, result1, result2);  }
+
+  /// Sets the initial coefficient vector using an exact function.
+  void set_ic(scalar (*exactfn)(double x, double y, scalar& dx, scalar& dy),
+              Mesh* mesh, Solution* result, int proj_norm = 1)
+  {
+    result->set_exact(mesh, exactfn);
+    set_ic_n(proj_norm, 1, result, result);  
+  }
 
   void set_ic_n(int proj_norm, int n, ...);
 
