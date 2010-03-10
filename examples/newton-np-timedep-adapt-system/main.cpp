@@ -61,7 +61,7 @@ const double E_FIELD = VOLTAGE / height;    // Boundary condtion for positive vo
 
 
 /* Simulation parameters */
-const int NSTEP = 50;                // Number of time steps
+const int NSTEP = 20;                // Number of time steps
 const double TAU = 0.1;              // Size of the time step
 const int P_INIT = 2;       	        // Initial polynomial degree of all mesh elements.
 const int REF_INIT = 10;     	        // Number of initial refinements

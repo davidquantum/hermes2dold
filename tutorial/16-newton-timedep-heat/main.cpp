@@ -9,7 +9,7 @@
 //  PDE: time-dependent heat transfer equation with nonlinear thermal 
 //  conductivity, du/dt - div[lambda(u)grad u] = f
 //
-//  Domain: unit square (-10,10)^2
+//  Domain: square (-10,10)^2
 //
 //  BC: Dirichlet, given by the function dir_lift() below.
 //  IC: Same function dir_lift().
@@ -151,10 +151,10 @@ int main(int argc, char* argv[])
   double current_time = 0.0;
   int t_step = 1;
   do {
-    info("\n**** Time step %d, t = %g s:\n", t_step++, current_time);
+    info("\n---- Time step %d, t = %g s:\n", t_step++, current_time);
 
     // Newton's method
-    nls.solve_newton_1(&u_prev_newton, NEWTON_TOL, NEWTON_MAX_ITER);
+    if (!nls.solve_newton_1(&u_prev_newton, NEWTON_TOL, NEWTON_MAX_ITER)) error("Newton's method did not converge.");
 
     // update previous time level solution
     u_prev_time.copy(&u_prev_newton);
