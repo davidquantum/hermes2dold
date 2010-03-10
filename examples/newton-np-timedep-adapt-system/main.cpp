@@ -40,7 +40,7 @@
 // Parameters to tweak the amount of output to the console
 #define VERBOSE
 #define NONCONT_OUTPUT
-#define SCREENSHOT
+#define NOSCREENSHOT
 
 /*** Fundamental coefficients ***/
 const double D = 1e-12; 	            // [m^2/s] Diffusion coefficient
