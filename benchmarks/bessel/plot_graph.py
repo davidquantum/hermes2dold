@@ -4,6 +4,7 @@ from pylab import *
 
 # plot DOF convergence graph
 pylab.yscale("log")
+pylab.xscale("log")
 pylab.title("Error convergence")
 pylab.xlabel("Degrees of freedom")
 pylab.ylabel("Error [%]")
@@ -23,6 +24,7 @@ pylab.figure()
 
 # plot CPU convergence graph
 pylab.yscale("log")
+pylab.xscale("log")
 pylab.title("Error convergence")
 pylab.xlabel("CPU time (s)")
 pylab.ylabel("Error [%]")

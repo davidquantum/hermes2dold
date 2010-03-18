@@ -27,7 +27,7 @@ void Node::ref_element(Element* e)
     // store the element pointer in a free slot of 'elem'
     if (elem[0] == NULL) elem[0] = e;
     else if (elem[1] == NULL) elem[1] = e;
-    else assert_msg(0, "E no free slot 'elem'");
+    else assert_msg(false, "E no free slot 'elem'");
   }
   ref++;
 }
@@ -135,13 +135,15 @@ Mesh::Mesh() : HashTable()
 
   if (first_call == 1) {
     first_call = 0;
-    printf("\n----------------------------------------------\n");
-    printf("  This is Hermes2D - a C++ library for rapid \n");
-    printf("prototyping of adaptive FEM and hp-FEM solvers\n");
-    printf("     developed by the hp-FEM group at UNR\n");
-    printf("    and distributed under the GPL license.\n");
-    printf("   For more details visit http://hpfem.org/.\n");
-    printf("----------------------------------------------\n");
+    if (verbose_mode) {
+        printf("\n----------------------------------------------\n");
+        printf("  This is Hermes2D - a C++ library for rapid \n");
+        printf("prototyping of adaptive FEM and hp-FEM solvers\n");
+        printf("     developed by the hp-FEM group at UNR\n");
+        printf("    and distributed under the GPL license.\n");
+        printf("   For more details visit http://hpfem.org/.\n");
+        printf("----------------------------------------------\n");
+    }
   }
 }
 

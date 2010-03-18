@@ -33,9 +33,8 @@ $D(x, y)$, absorption cross-section $\Sigma_a(x, y)$ and the source term $Q_{ext
 are constant in the subdomains. The source $Q_{ext} = 1$ in areas 1 and 3 and zero 
 elsewhere. Boundary conditions for the flux $\Phi$ are zero everywhere. 
 
-It is worth noticing how different material parameters are handled - we define a separate weak form 
-for each material. This approach is more flexible to how material parameters were handled in 
-tutorial examples 07 and 12:
+It is worth noticing that different material parameters can be handled using a separate weak form 
+for each material:
 
 ::
 
@@ -78,6 +77,11 @@ tutorial examples 07 and 12:
       return D_5 * int_grad_u_grad_v<Real, Scalar>(n, wt, u, v) 
              + SIGMA_A_5 * int_u_v<Real, Scalar>(n, wt, u, v);
     }
+
+Recall that this is not the only way to handle spatially-dependent material parameters. Alternatively, one can define 
+a global function returning material parameters as a function of spatial coordinates. This was done, e.g., 
+in the tutorial examples `07 <http://hpfem.org/git/gitweb.cgi/hermes2d.git/blob/HEAD:/tutorial/07-general>`_ 
+and `12 <http://hpfem.org/git/gitweb.cgi/hermes2d.git/blob/HEAD:/tutorial/12-adapt-general>`_.
 
 The weak forms are associated with element material flags (coming from the mesh file) as follows:
 
@@ -149,8 +153,7 @@ Iron-Water
 More information to this example can be found in the corresponding 
 `main.cpp <http://hpfem.org/git/gitweb.cgi/hermes2d.git/blob/HEAD:/examples/iron-water/main.cpp>`_ file.
 This example is very similar to the example "saphir", the main difference being that 
-it reads a mesh file in the exodusii format (created by Cubit). 
-This example only builds 
+it reads a mesh file in the exodusii format (created by Cubit). This example only builds 
 if you have the `ExodusII <http://sourceforge.net/projects/exodusii/>`_ and 
 `NetCDF <http://www.unidata.ucar.edu/software/netcdf/>`_ libraries installed on your system and 
 the variables WITH_EXODUSII, EXODUSII_ROOT and NETCDF_ROOT defined properly. 
@@ -249,8 +252,10 @@ CPU time convergence graphs:
 Nernst-Planck
 -------------
 
-This section describes how to make a weak form presentation
-of Poisson and Nernst-Planck equation system. The Nernst-Planck
+More information to this example can be found in the corresponding 
+`main.cpp <http://hpfem.org/git/gitweb.cgi/hermes2d.git/blob/HEAD:/examples/newton-np-timedep-adapt-system/main.cpp>`_ file.
+The example is concerned with the finite element solution 
+of the Poisson and Nernst-Planck equation system. The Nernst-Planck
 equation is often used to describe the diffusion, convection,
 and migration of charged particles:
 
@@ -612,6 +617,468 @@ To be added soon.
 
 
 
+Crack
+-----
+
+More information to this example can be found in the corresponding 
+`main.cpp <http://hpfem.org/git/gitweb.cgi/hermes2d.git/blob/HEAD:/examples/crack/main.cpp>`_ file.
+The example employs the adaptive multimesh hp-FEM to solve the 
+equations of linear elasticity. The domain contains two horizontal 
+cracks causing strong singularities at their corners. Each
+displacement component is approximated on an individual mesh.
+
+The computational domain is a $1.5 \times 0.3$ m rectangle containing two horizontal 
+cracks, as shown in the following figure:
+
+.. image:: img/crack/domain.png
+   :align: center
+   :width: 780
+   :alt: Domain.
+
+The cracks have a flat diamond-like shape and their width along with some other parameters 
+can be changed in the mesh file `crack.mesh 
+<http://hpfem.org/git/gitweb.cgi/hermes2d.git/blob/HEAD:/examples/crack/crack.mesh>`_:
+
+::
+
+    a = 0.25   # horizontal size of an eleemnt
+    b = 0.1    # vertical size of an element
+    w = 0.001  # width of the cracks
+
+Solved are equations of linear elasticity with the following boundary conditions: 
+$u_1 = u_2 = 0$ on the left edge, external force $f$ on the upper edge, and zero Neumann
+conditions for $u_1$ and $u_2$ on the right and bottom edges as well as on the crack 
+boundaries. Translated into the weak forms, this becomes:
+
+::
+
+    // linear and bilinear forms
+    template<typename Real, typename Scalar>
+    Scalar bilinear_form_0_0(int n, double *wt, Func<Real> *u, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext)
+    {
+      return (lambda + 2*mu) * int_dudx_dvdx<Real, Scalar>(n, wt, u, v) +
+                          mu * int_dudy_dvdy<Real, Scalar>(n, wt, u, v);
+    }
+
+    template<typename Real, typename Scalar>
+    Scalar bilinear_form_0_1(int n, double *wt, Func<Real> *u, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext)
+    {
+      return lambda * int_dudy_dvdx<Real, Scalar>(n, wt, u, v) +
+                 mu * int_dudx_dvdy<Real, Scalar>(n, wt, u, v);
+    }
+
+    template<typename Real, typename Scalar>
+    Scalar bilinear_form_1_0(int n, double *wt, Func<Real> *u, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext)
+    {
+      return     mu * int_dudy_dvdx<Real, Scalar>(n, wt, u, v) +
+             lambda * int_dudx_dvdy<Real, Scalar>(n, wt, u, v);
+    }
+
+    template<typename Real, typename Scalar>
+    Scalar bilinear_form_1_1(int n, double *wt, Func<Real> *u, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext)
+    {
+      return              mu * int_dudx_dvdx<Real, Scalar>(n, wt, u, v) +
+             (lambda + 2*mu) * int_dudy_dvdy<Real, Scalar>(n, wt, u, v);
+    }
+
+    template<typename Real, typename Scalar>
+    Scalar linear_form_surf_1(int n, double *wt, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext)
+    {
+      return -f * int_v<Real, Scalar>(n, wt, v);
+    }
+
+The multimesh discretization is activated by creating a common master mesh 
+for both displacement components:
+
+::
+
+    // load the mesh
+    Mesh xmesh, ymesh;
+    H2DReader mloader;
+    mloader.load("crack.mesh", &xmesh);
+    ymesh.copy(&xmesh);          // this defines the common master mesh for
+                                 // both displacement fields
+
+Then we define separate spaces for $u_1$ and $u_2$:
+
+::
+
+    // create the x displacement space
+    H1Space xdisp(&xmesh, &shapeset);
+    xdisp.set_bc_types(bc_types_xy);
+    xdisp.set_uniform_order(P_INIT);
+
+    // create the y displacement space
+    H1Space ydisp(MULTI ? &ymesh : &xmesh, &shapeset);
+    ydisp.set_bc_types(bc_types_xy);
+    ydisp.set_uniform_order(P_INIT);
+
+The weak forms are registered as usual:
+
+::
+
+    // initialize the weak formulation
+    WeakForm wf(2);
+    wf.add_biform(0, 0, callback(bilinear_form_0_0), SYM);
+    wf.add_biform(0, 1, callback(bilinear_form_0_1), SYM);
+    wf.add_biform(1, 1, callback(bilinear_form_1_1), SYM);
+    wf.add_liform_surf(1, callback(linear_form_surf_1), marker_top);
+
+Next we set bilinear forms for the calculation of the global energy norm,
+and calculate the error:
+
+::
+
+    // calculate error estimate wrt. fine mesh solution in energy norm
+    H1OrthoHP hp(2, &xdisp, &ydisp);
+    hp.set_biform(0, 0, bilinear_form_0_0<scalar, scalar>, bilinear_form_0_0<Ord, Ord>);
+    hp.set_biform(0, 1, bilinear_form_0_1<scalar, scalar>, bilinear_form_0_1<Ord, Ord>);
+    hp.set_biform(1, 0, bilinear_form_1_0<scalar, scalar>, bilinear_form_1_0<Ord, Ord>);
+    hp.set_biform(1, 1, bilinear_form_1_1<scalar, scalar>, bilinear_form_1_1<Ord, Ord>);
+    double err_est = hp.calc_error_2(&sln_x_coarse, &sln_y_coarse, &sln_x_fine, &sln_y_fine) * 100;
+    info("Error estimate: %g %%", err_est);
+
+The rest is straightforward and details can be found in the 
+`main.cpp <http://hpfem.org/git/gitweb.cgi/hermes2d.git/blob/HEAD:/examples/crack/main.cpp>`_ file.
+
+Detail of singularity in Von Mises stress at the left end of the left crack:
+
+.. image:: img/crack/sol.png
+   :align: center
+   :width: 700
+   :alt: Solution.
+
+Final meshes for $u_1$ and $u_2$ (h-FEM with linear elements):
+
+.. image:: img/crack/mesh-x-h1.png
+   :align: center
+   :width: 800
+   :alt: Solution.
+
+.. image:: img/crack/mesh-y-h1.png
+   :align: center
+   :width: 800
+   :alt: Solution.
+
+Final meshes for $u_1$ and $u_2$ (h-FEM with quadratic elements):
+
+.. image:: img/crack/mesh-x-h2.png
+   :align: center
+   :width: 800
+   :alt: Solution.
+
+.. image:: img/crack/mesh-x-h2.png
+   :align: center
+   :width: 800
+   :alt: Solution.
+
+Final meshes for $u_1$ and $u_2$ (hp-FEM):
+
+.. image:: img/crack/mesh-x-hp.png
+   :align: center
+   :width: 800
+   :alt: Solution.
+
+.. image:: img/crack/mesh-y-hp.png
+   :align: center
+   :width: 800
+   :alt: Solution.
+
+DOF convergence graphs:
+
+.. image:: img/crack/conv_dof.png
+   :align: center
+   :width: 600
+   :height: 400
+   :alt: DOF convergence graph.
+
+CPU time convergence graphs:
+
+.. image:: img/crack/conv_cpu.png
+   :align: center
+   :width: 600
+   :height: 400
+   :alt: CPU convergence graph.
+
+Next let us compare the multimesh hp-FEM with the standard (single-mesh) hp-FEM:
+
+.. image:: img/crack/conv_dof_compar.png
+   :align: center
+   :width: 600
+   :height: 400
+   :alt: DOF convergence graph.
+
+The same comparison in terms of CPU time:
+
+.. image:: img/crack/conv_cpu_compar.png
+   :align: center
+   :width: 600
+   :height: 400
+   :alt: CPU convergence graph.
+
+
+
+
+
+Thermoelasticity
+----------------
+
+More information to this example can be found in the corresponding 
+`main.cpp <http://hpfem.org/git/gitweb.cgi/hermes2d.git/blob/HEAD:/examples/thermoelasticity/main.cpp>`_ file.
+The example deals with a massive hollow conductor is heated by induction and 
+cooled by water running inside. We will model this problem using linear thermoelasticity 
+equations, where the x-displacement, y-displacement, and the temperature will be approximated 
+on individual meshes equipped with mutually independent adaptivity mechanisms. 
+
+The computational domain is shown in the following figure and the details of the geometry can be found 
+in the corresponding 
+`mesh file <http://hpfem.org/git/gitweb.cgi/hermes2d.git/blob/HEAD:/examples/thermoelasticity/domain.mesh>`_.
+It is worth mentioning how the circular arcs are defined via NURBS:
+
+::
+
+    curves =
+    {
+      { 11, 19, 90 },
+      { 10, 15, 90 },
+      { 16, 6, 90 },
+      { 12, 7, 90 }
+    }
+
+The triplet on each line consists of two boundary vertex indices and 
+the angle of the circular arc.
+
+.. image:: img/thermoelasticity/domain.png
+   :align: center
+   :width: 700
+   :alt: Domain.
+
+For the equations of linear thermoelasticity and the boundary conditions we refer to the 
+paper *P. Solin, J. Cerveny, L. Dubcova, D. Andrs: Monolithic Discretization 
+of Linear Thermoelasticity Problems via Adaptive Multimesh hp-FEM*,  
+`doi.org/10.1016/j.cam.2009.08.092 <http://dx.doi.org/10.1016/j.cam.2009.08.092>`_.
+The corresponding weak forms are:
+
+::
+
+    template<typename Real, typename Scalar>
+    Scalar bilinear_form_0_0(int n, double *wt, Func<Real> *u, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext)
+    {
+      return l2m * int_dudx_dvdx<Real, Scalar>(n, wt, u, v) +
+              mu * int_dudy_dvdy<Real, Scalar>(n, wt, u, v);
+    }
+
+    template<typename Real, typename Scalar>
+    Scalar bilinear_form_0_1(int n, double *wt, Func<Real> *u, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext)
+    {
+      return lambda * int_dudy_dvdx<Real, Scalar>(n, wt, u, v) +
+                 mu * int_dudx_dvdy<Real, Scalar>(n, wt, u, v);
+    }
+
+    template<typename Real, typename Scalar>
+    Scalar bilinear_form_0_2(int n, double *wt, Func<Real> *u, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext)
+    {
+      return - (3*lambda + 2*mu) * alpha * int_dudx_v<Real, Scalar>(n, wt, u, v);
+    }
+
+    template<typename Real, typename Scalar>
+    Scalar bilinear_form_1_0(int n, double *wt, Func<Real> *u, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext)
+    {
+      return     mu * int_dudy_dvdx<Real, Scalar>(n, wt, u, v) +
+             lambda * int_dudx_dvdy<Real, Scalar>(n, wt, u, v);
+    }
+
+    template<typename Real, typename Scalar>
+    Scalar bilinear_form_1_1(int n, double *wt, Func<Real> *u, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext)
+    {
+      return  mu * int_dudx_dvdx<Real, Scalar>(n, wt, u, v) +
+             l2m * int_dudy_dvdy<Real, Scalar>(n, wt, u, v);
+    }
+
+    template<typename Real, typename Scalar>
+    Scalar bilinear_form_1_2(int n, double *wt, Func<Real> *u, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext)
+    {
+      return - (3*lambda + 2*mu) * alpha * int_dudy_v<Real, Scalar>(n, wt, u, v);
+    }
+
+    template<typename Real, typename Scalar>
+    Scalar bilinear_form_2_2(int n, double *wt, Func<Real> *u, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext)
+    {
+      return int_grad_u_grad_v<Real, Scalar>(n, wt, u, v);
+    }
+
+    template<typename Real, typename Scalar>
+    Scalar linear_form_1(int n, double *wt, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext)
+    {
+      return -g * rho * int_v<Real, Scalar>(n, wt, v);
+    }
+
+    template<typename Real, typename Scalar>
+    Scalar linear_form_2(int n, double *wt, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext)
+    {
+      return HEAT_SRC * int_v<Real, Scalar>(n, wt, v);
+    }
+
+    template<typename Real, typename Scalar>
+    Scalar linear_form_surf_2(int n, double *wt, Func<Real> *v, Geom<Real> *e, ExtData<Scalar> *ext)
+    {
+      return HEAT_FLUX_OUTER * int_v<Real, Scalar>(n, wt, v);
+    }
+
+The multimesh discretization is initialized by creating the master mesh
+via copying the xmesh into ymesh and tmesh:
+
+::
+
+    // Load the mesh
+    Mesh xmesh, ymesh, tmesh;
+    H2DReader mloader;
+    mloader.load("domain.mesh", &xmesh); // master mesh
+    ymesh.copy(&xmesh);                // ydisp will share master mesh with xdisp
+    tmesh.copy(&xmesh);                // temp will share master mesh with xdisp
+
+The weak formulation is initialized as follows:
+
+::
+
+    // Initialize the weak formulation
+    WeakForm wf(3);
+    wf.add_biform(0, 0, callback(bilinear_form_0_0));
+    wf.add_biform(0, 1, callback(bilinear_form_0_1), SYM);
+    wf.add_biform(0, 2, callback(bilinear_form_0_2));
+    wf.add_biform(1, 1, callback(bilinear_form_1_1));
+    wf.add_biform(1, 2, callback(bilinear_form_1_2));
+    wf.add_biform(2, 2, callback(bilinear_form_2_2));
+    wf.add_liform(1, callback(linear_form_1));
+    wf.add_liform(2, callback(linear_form_2));
+    wf.add_liform_surf(2, callback(linear_form_surf_2));
+
+The coarse mesh problem is solved using
+
+::
+
+    // solve the coarse mesh problem
+    LinSystem ls(&wf, &solver);
+    ls.set_spaces(3, &xdisp, &ydisp, &temp);
+    ls.set_pss(3, &xpss, &ypss, &tpss);
+    ls.assemble();
+    ls.solve(3, &x_sln_coarse, &y_sln_coarse, &t_sln_coarse);
+
+The following code defines the global norm for error measurement, and 
+calculates element errors. In particular, notice the function 
+hp.calc_error_n()
+
+::
+
+    // calculate element errors and total error estimate
+    H1OrthoHP hp(3, &xdisp, &ydisp, &temp);
+    hp.set_biform(0, 0, bilinear_form_0_0<scalar, scalar>, bilinear_form_0_0<Ord, Ord>);
+    hp.set_biform(0, 1, bilinear_form_0_1<scalar, scalar>, bilinear_form_0_1<Ord, Ord>);
+    hp.set_biform(0, 2, bilinear_form_0_2<scalar, scalar>, bilinear_form_0_2<Ord, Ord>);
+    hp.set_biform(1, 0, bilinear_form_1_0<scalar, scalar>, bilinear_form_1_0<Ord, Ord>);
+    hp.set_biform(1, 1, bilinear_form_1_1<scalar, scalar>, bilinear_form_1_1<Ord, Ord>);
+    hp.set_biform(1, 2, bilinear_form_1_2<scalar, scalar>, bilinear_form_1_2<Ord, Ord>);
+    hp.set_biform(2, 2, bilinear_form_2_2<scalar, scalar>, bilinear_form_2_2<Ord, Ord>);
+    double err_est = hp.calc_error_n(3, &x_sln_coarse, &y_sln_coarse, &t_sln_coarse, &x_sln_fine, &y_sln_fine, &t_sln_fine) * 100;
+
+Sample snapshot of solutions, meshes and convergence graphs are below. 
+
+Solution (Von Mises stress):
+
+.. image:: img/thermoelasticity/mises.png
+   :align: center
+   :width: 790
+   :alt: Solution.
+
+Solution (temperature):
+
+.. image:: img/thermoelasticity/temp.png
+   :align: center
+   :width: 780
+   :alt: Solution.
+
+Final meshes for $u_1$, $u_2$ and $T$ (h-FEM with linear elements):
+
+.. image:: img/thermoelasticity/x-mesh-h1.png
+   :align: center
+   :width: 760
+   :alt: Solution.
+
+.. image:: img/thermoelasticity/y-mesh-h1.png
+   :align: center
+   :width: 760
+   :alt: Solution.
+
+.. image:: img/thermoelasticity/t-mesh-h1.png
+   :align: center
+   :width: 760
+   :alt: Solution.
+
+Final meshes for $u_1$, $u_2$ and $T$ (h-FEM with quadratic elements):
+
+.. image:: img/thermoelasticity/x-mesh-h2.png
+   :align: center
+   :width: 760
+   :alt: Solution.
+
+.. image:: img/thermoelasticity/y-mesh-h2.png
+   :align: center
+   :width: 760
+   :alt: Solution.
+
+.. image:: img/thermoelasticity/t-mesh-h2.png
+   :align: center
+   :width: 760
+   :alt: Solution.
+
+Final meshes for $u_1$, $u_2$ and $T$ (h-FEM with quadratic elements):
+
+.. image:: img/thermoelasticity/x-mesh-hp.png
+   :align: center
+   :width: 760
+   :alt: Solution.
+
+.. image:: img/thermoelasticity/y-mesh-hp.png
+   :align: center
+   :width: 760
+   :alt: Solution.
+
+.. image:: img/thermoelasticity/t-mesh-hp.png
+   :align: center
+   :width: 760
+   :alt: Solution.
+
+DOF convergence graphs:
+
+.. image:: img/crack/conv_dof.png
+   :align: center
+   :width: 600
+   :height: 400
+   :alt: DOF convergence graph.
+
+CPU time convergence graphs:
+
+.. image:: img/thermoelasticity/conv_cpu.png
+   :align: center
+   :width: 600
+   :height: 400
+   :alt: CPU convergence graph.
+
+Next let us compare, for example, multimesh h-FEM with linear elements with the standard (single-mesh)
+h-FEM:
+
+.. image:: img/thermoelasticity/conv_compar_dof.png
+   :align: center
+   :width: 600
+   :height: 400
+   :alt: DOF convergence graph.
+
+
+
+
+
+
+
 Waveguide
 ---------
 
@@ -619,15 +1086,13 @@ To be added soon.
 
 
 
-Crack
------
+
+
+Wire
+----
 
 To be added soon.
 
 
 
-Gross-Pitaevski
----------------
-
-To be added soon.
 
