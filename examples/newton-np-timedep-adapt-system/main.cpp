@@ -61,12 +61,13 @@ const double E_FIELD = VOLTAGE / height;    // Boundary condtion for positive vo
 
 
 /* Simulation parameters */
-const int NSTEP = 20;                // Number of time steps
+const int NSTEP = 30;                // Number of time steps
 const double TAU = 0.1;              // Size of the time step
 const int P_INIT = 2;       	        // Initial polynomial degree of all mesh elements.
-const int REF_INIT = 10;     	        // Number of initial refinements
-const bool MULTIMESH = true;	        // Multimesh?
-const int TIME_DISCR = 1;             // 1 for implicit Euler, 2 for Crank-Nicolson
+const int REF_INIT = 1;     	        // Number of initial refinements
+const bool MULTIMESH = false;	        // Multimesh?
+const int TIME_DISCR = 2;             // 1 for implicit Euler, 2 for Crank-Nicolson
+const int VOLT_BOUNDARY = 1;            // 1 for Dirichlet, 2 for Neumann
 
 /* Nonadaptive solution parameters */
 const double NEWTON_TOL = 1e-2;         // Stopping criterion for nonadaptive solution
@@ -75,11 +76,11 @@ const double NEWTON_TOL = 1e-2;         // Stopping criterion for nonadaptive so
 const double NEWTON_TOL_COARSE = 0.01;  // Stopping criterion for Newton on coarse mesh
 const double NEWTON_TOL_REF = 0.1;	    // Stopping criterion for Newton on fine mesh
 
-const int UNREF_FREQ = 1;             // every UNREF_FREQth time step the mesh
+const int UNREF_FREQ = 5;               // every UNREF_FREQth time step the mesh
                                         // is unrefined
 const double THRESHOLD = 0.3;           // This is a quantitative parameter of the adapt(...) function and
                                         // it has different meanings for various adaptive strategies (see below).
-const int STRATEGY = 0;                 // Adaptive strategy:
+const int STRATEGY = 1;                 // Adaptive strategy:
                                         // STRATEGY = 0 ... refine elements until sqrt(THRESHOLD) times total
                                         //   error is processed. If more elements have similar errors, refine
                                         //   all to keep the mesh symmetric.
@@ -94,7 +95,7 @@ const int ADAPT_TYPE = 0;               // Type of automatic adaptivity:
                                         // ADAPT_TYPE = 2 ... adaptive p-FEM.
 
 const int NDOF_STOP = 5000;		          // To prevent adaptivity from going on forever.
-const double ERR_STOP = 0.5;            // Stopping criterion for adaptivity (rel. error tolerance between the
+const double ERR_STOP = 0.1;            // Stopping criterion for adaptivity (rel. error tolerance between the
                                         // fine mesh and coarse mesh solution in percent).
 
 // Program parameters 
@@ -108,7 +109,7 @@ const std::string USE_ADAPTIVE("adapt");
 
 // Poisson takes Dirichlet and Neumann boundaries
 int phi_bc_types(int marker) {
-  return (marker == SIDE_MARKER || marker == TOP_MARKER) 
+  return (marker == SIDE_MARKER || (marker == TOP_MARKER && VOLT_BOUNDARY == 2)) 
     ? BC_NATURAL : BC_ESSENTIAL;
 }
 
@@ -119,7 +120,7 @@ int C_bc_types(int marker) {
 
 // Diricleht Boundary conditions for Poisson equation.
 scalar phi_bc_values(int marker, double x, double y) {
-  return 0.0;
+  return marker == TOP_MARKER ? VOLTAGE : 0.0;
 }
 
 template<class Real, class Scalar>
@@ -390,8 +391,10 @@ int main (int argc, char* argv[]) {
 
   H2DReader mloader;
   mloader.load("small.mesh", &basemesh);
-  basemesh.refine_towards_boundary(TOP_MARKER, REF_INIT);
-  basemesh.refine_towards_boundary(BOT_MARKER, REF_INIT - 1);
+  basemesh.refine_towards_boundary(TOP_MARKER, 
+      adaptive ? REF_INIT : REF_INIT * 10);
+  basemesh.refine_towards_boundary(BOT_MARKER, 
+    adaptive ? REF_INIT - 1 : (REF_INIT * 10) - 1);
   Cmesh.copy(&basemesh);
   phimesh.copy(&basemesh);
 
@@ -441,7 +444,10 @@ int main (int argc, char* argv[]) {
     wf.add_liform(0, callback(Fc_cranic), ANY, 4, &Cp, &Ci, &phii, &phip);
     wf.add_biform(0, 0, callback(J_cranic_DFcDYc), UNSYM, ANY, 2, &phii, &phip);
   }
-  wf.add_liform_surf(1, callback(linear_form_surf_top), TOP_MARKER);
+  // Neumann voltage boundary
+  if (VOLT_BOUNDARY == 2) {
+    wf.add_liform_surf(1, callback(linear_form_surf_top), TOP_MARKER);
+  }
   wf.add_biform(1, 1, callback(J_euler_DFphiDYphi), UNSYM);
   wf.add_biform(0, 1, callback(J_euler_DFcDYphi), UNSYM, ANY, 1, &Ci);
   wf.add_biform(1, 0, callback(J_euler_DFphiDYc), UNSYM);
