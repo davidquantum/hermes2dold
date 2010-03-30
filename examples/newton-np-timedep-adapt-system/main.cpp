@@ -321,8 +321,7 @@ void solveAdaptive(Mesh &Cmesh, Mesh &phimesh, Mesh &basemesh, NonlinSystem &nls
 
 
       }
-
-
+      
       sprintf(title, "hp-mesh (C), time level %d, adaptivity %d", n, at);
       Cordview.set_title(title);
       sprintf(title, "hp-mesh (phi), time level %d, adaptivity %d", n, at);
@@ -333,9 +332,7 @@ void solveAdaptive(Mesh &Cmesh, Mesh &phimesh, Mesh &basemesh, NonlinSystem &nls
       Cordview.save_numbered_screenshot("screenshots/Cord%03d.bmp", at_index, true);
       phiordview.save_numbered_screenshot("screenshots/phiord%03d.bmp", at_index, true);
       #endif
-
-
-
+      at_index++;
     } while (!done);
     graph_err.add_values(0, n, err);
     graph_err.save("error.gp");
@@ -366,7 +363,6 @@ void solveAdaptive(Mesh &Cmesh, Mesh &phimesh, Mesh &basemesh, NonlinSystem &nls
     }
     phi_prev_time.copy(&phisln_fine);
     C_prev_time.copy(&Csln_fine);
-
   }
   View::wait();
 }
@@ -412,7 +408,6 @@ int main (int argc, char* argv[]) {
   C.set_bc_types(C_bc_types);
   phi.set_bc_types(phi_bc_types);
   phi.set_bc_values(phi_bc_values);
-  //C.set_bc_values(C_bc_values);
 
   // set polynomial degrees
   C.set_uniform_order(P_INIT);
@@ -428,10 +423,10 @@ int main (int argc, char* argv[]) {
   // The weak form for 2 equations
   WeakForm wf(2);
 
-  Solution Cp,    // prveious time step solution, for the time integration
-    Ci,   // solution convergin during the Newton's iteration
-    phip,
-    phii;
+  Solution C_prev_time,    // prveious time step solution, for the time integration
+    C_prev_newton,   // solution convergin during the Newton's iteration
+    phi_prev_time,
+    phi_prev_newton;
 
   // Add the bilinear and linear forms
   // generally, the equation system is described:
@@ -439,20 +434,22 @@ int main (int argc, char* argv[]) {
   // a21(u1, v2) + a22(u2, v2) + a2n(un, v2) = l2(v2)
   // an1(u1, vn) + an2(u2, vn) + ann(un, vn) = ln(vn)
   if (TIME_DISCR == 1) {
-    wf.add_liform(0, callback(Fc_euler), ANY, 3, &Cp, &Ci, &phii);
-    wf.add_biform(0, 0, callback(J_euler_DFcDYc), UNSYM, ANY, 1, &phii);
+    wf.add_liform(0, callback(Fc_euler), ANY, 3,
+        &C_prev_time, &C_prev_newton, &phi_prev_newton);
+    wf.add_biform(0, 0, callback(J_euler_DFcDYc), UNSYM, ANY, 1, &phi_prev_newton);
   } else {
-    wf.add_liform(0, callback(Fc_cranic), ANY, 4, &Cp, &Ci, &phii, &phip);
-    wf.add_biform(0, 0, callback(J_cranic_DFcDYc), UNSYM, ANY, 2, &phii, &phip);
+    wf.add_liform(0, callback(Fc_cranic), ANY, 4,
+        &C_prev_time, &C_prev_newton, &phi_prev_newton, &phi_prev_time);
+    wf.add_biform(0, 0, callback(J_cranic_DFcDYc), UNSYM, ANY, 2, &phi_prev_newton, &phi_prev_time);
   }
   // Neumann voltage boundary
   if (VOLT_BOUNDARY == 2) {
     wf.add_liform_surf(1, callback(linear_form_surf_top), TOP_MARKER);
   }
   wf.add_biform(1, 1, callback(J_euler_DFphiDYphi), UNSYM);
-  wf.add_biform(0, 1, callback(J_euler_DFcDYphi), UNSYM, ANY, 1, &Ci);
+  wf.add_biform(0, 1, callback(J_euler_DFcDYphi), UNSYM, ANY, 1, &C_prev_newton);
   wf.add_biform(1, 0, callback(J_euler_DFphiDYc), UNSYM);
-  wf.add_liform(1, callback(Fphi_euler), ANY, 2, &Ci, &phii);
+  wf.add_liform(1, callback(Fphi_euler), ANY, 2, &C_prev_newton, &phi_prev_newton);
 
   // Nonlinear solver
   UmfpackSolver umfpack;
@@ -464,23 +461,20 @@ int main (int argc, char* argv[]) {
     nls.set_pss(1, &Cpss);
   }
 
-  info("UmfpackSolver initialized");
+  //phi_prev_time.set_dirichlet_lift(&phi, MULTIMESH ? &phi_prev_timess : &C_prev_timess);
+  C_prev_time.set_const(&Cmesh, C_CONC);
+  phi_prev_time.set_const(MULTIMESH ? &phimesh : &Cmesh, 0);
 
+  C_prev_newton.copy(&C_prev_time);
+  phi_prev_newton.copy(&phi_prev_time);
 
-  //Cp.set_dirichlet_lift(&C, &Cpss);
-  //phip.set_dirichlet_lift(&phi, MULTIMESH ? &phipss : &Cpss);
-  Cp.set_const(&Cmesh, C_CONC);
-  phip.set_const(MULTIMESH ? &phimesh : &Cmesh, 0);
-
-  Ci.copy(&Cp);
-  phii.copy(&phip);
-
-  nls.set_ic(&Ci, &phii, &Ci, &phii);
+  nls.set_ic(&C_prev_newton, &phi_prev_newton, &C_prev_newton, &phi_prev_newton);
 
   if (adaptive) {
-    solveAdaptive(Cmesh, phimesh, basemesh, nls, C, phi, Cp, Ci, phip, phii);
+    solveAdaptive(Cmesh, phimesh, basemesh, nls, C, phi, C_prev_time,
+        C_prev_newton, phi_prev_time, phi_prev_newton);
   } else {
-    solveNonadaptive(Cmesh, nls, Cp, Ci, phip, phii);
+    solveNonadaptive(Cmesh, nls, C_prev_time, C_prev_newton, phi_prev_time, phi_prev_newton);
   }
 
   return 0;
