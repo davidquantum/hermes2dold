@@ -61,6 +61,8 @@ const double E_FIELD = VOLTAGE / height;    // Boundary condtion for positive vo
 
 
 /* Simulation parameters */
+const int PROJ_TYPE = 1;                 // For the projection of the initial condition 
+                                         // on the initial mesh: 1 = H1 projection, 0 = L2 projection
 const int NSTEP = 30;                // Number of time steps
 const double TAU = 0.1;              // Size of the time step
 const int P_INIT = 2;       	        // Initial polynomial degree of all mesh elements.
@@ -73,8 +75,12 @@ const int VOLT_BOUNDARY = 1;            // 1 for Dirichlet, 2 for Neumann
 const double NEWTON_TOL = 1e-2;         // Stopping criterion for nonadaptive solution
 
 /* Adaptive solution parameters */
-const double NEWTON_TOL_COARSE = 0.01;  // Stopping criterion for Newton on coarse mesh
-const double NEWTON_TOL_REF = 0.1;	    // Stopping criterion for Newton on fine mesh
+const double NEWTON_TOL_COARSE = 0.01;     // Stopping criterion for Newton on coarse mesh
+const double NEWTON_TOL_FINE = 0.05;       // Stopping criterion for Newton on fine mesh
+const int NEWTON_MAX_ITER = 20;            // Maximum allowed number of Newton iterations
+const bool NEWTON_ON_COARSE_MESH = false;  // true... Newton is done on coarse mesh in every adaptivity step
+                                           // false...Newton is done on coarse mesh only once, then projection 
+                                           // of the fine mesh solution to coarse mesh is used
 
 const int UNREF_FREQ = 5;               // every UNREF_FREQth time step the mesh
                                         // is unrefined
@@ -131,7 +137,7 @@ Scalar linear_form_surf_top(int n, double *wt, Func<Real> *v, Geom<Real> *e, Ext
 
 /** Nonadaptive solver.*/
 void solveNonadaptive(Mesh &mesh, NonlinSystem &nls,
-    Solution &Cp, Solution &Ci, Solution &phip, Solution &phii) {
+    Solution &Cprev, Solution &Citer, Solution &phiprev, Solution &phiiter) {
   begin_time();
 
   //VectorView vview("electric field [V/m]", 0, 0, 600, 600);
@@ -139,10 +145,11 @@ void solveNonadaptive(Mesh &mesh, NonlinSystem &nls,
   ScalarView phiview("Voltage [V]", 650, 0, 600, 600);
 
   #ifdef CONT_OUTPUT
-  phiview.show(&phii);
-  Cview.show(&Ci);
+  phiview.show(&phiiter);
+  Cview.show(&Citer);
   Cview.wait_for_keypress();
   #endif
+
   Solution Csln, phisln;
   for (int n = 1; n <= NSTEP; n++) {
 
@@ -167,28 +174,29 @@ void solveNonadaptive(Mesh &mesh, NonlinSystem &nls,
       info("Residuum L2 norm: %g\n", res_l2_norm);
       #endif
 
-      Ci.copy(&Csln);
-      phii.copy(&phisln);
+      Citer.copy(&Csln);
+      phiiter.copy(&phisln);
 
     } while (res_l2_norm > NEWTON_TOL);
     #ifdef CONT_OUTPUT
-    phiview.show(&phii);
-    Cview.show(&Ci);
+    phiview.show(&phiiter);
+    Cview.show(&Citer);
     #endif
-    phip.copy(&phii);
-    Cp.copy(&Ci);
+    phiprev.copy(&phiiter);
+    Cprev.copy(&Citer);
   }
   verbose("\nTotal run time: %g sec", end_time());
-  Cview.show(&Ci);
-  phiview.show(&phii);
+  Cview.show(&Citer);
+  phiview.show(&phiiter);
   //MeshView mview("small.mesh", 100, 30, 800, 800);
   //mview.show(&mesh);
   View::wait();
 }
 
 /** Adaptive solver.*/
-void solveAdaptive(Mesh &Cmesh, Mesh &phimesh, Mesh &basemesh, NonlinSystem &nls, H1Space &C, H1Space &phi,
-    Solution &Cp, Solution &Ci, Solution &phip, Solution &phii) {
+void solveAdaptive(Mesh &Cmesh, Mesh &phimesh, Mesh &basemesh, NonlinSystem &nls,
+     H1Space &Cspace, H1Space &phispace, Solution &C_prev_time, Solution &C_prev_newton,
+     Solution &phi_prev_time, Solution &phi_prev_newton) {
 
   char title[100];
   //VectorView vview("electric field [V/m]", 0, 0, 600, 600);
@@ -197,7 +205,6 @@ void solveAdaptive(Mesh &Cmesh, Mesh &phimesh, Mesh &basemesh, NonlinSystem &nls
   OrderView Cordview("C order", 0, 300, 600, 600);
   OrderView phiordview("Phi order", 600, 300, 600, 600);
   
-  // Different Gnuplot graphs.
 
   // convergence graph wrt. the number of degrees of freedom
   GnuplotGraph graph_err;
@@ -210,123 +217,119 @@ void solveAdaptive(Mesh &Cmesh, Mesh &phimesh, Mesh &basemesh, NonlinSystem &nls
   graph_dof.add_row(MULTIMESH ? "multi-mesh" : "single-mesh", "k", "-", "o");
 
 
-  sprintf(title, "Initial iteration");
   phiview.set_title(title);
   Cview.set_title(title);
-  phiview.show(&phii);
-  Cview.show(&Ci);
+  phiview.show(&phi_prev_newton);
+  Cview.show(&C_prev_newton);
   
-  Cordview.show(&C);
-  phiordview.show(&phi);
+  Cordview.show(&Cspace);
+  phiordview.show(&phispace);
+  
+  //Newton's loop on a coarse mesh
+  info("---- Time step 1, Newton solve on the coarse mesh\n");
+  if (!nls.solve_newton_2(&C_prev_newton, &phi_prev_newton, NEWTON_TOL_COARSE, NEWTON_MAX_ITER)) 
+    error("Newton's method did not converge.");
+
   Solution Csln_coarse, phisln_coarse, Csln_fine, phisln_fine;
+  
+  Csln_coarse.copy(&C_prev_newton);
+  phisln_coarse.copy(&phi_prev_newton);
+
   int at_index = 1; //for saving screenshot
   for (int n = 1; n <= NSTEP; n++) {
-    if (n % UNREF_FREQ == 0) {
+    if (n > 1 && n % UNREF_FREQ == 0) {
       Cmesh.copy(&basemesh);
       if (MULTIMESH) {
         phimesh.copy(&basemesh);
       }
-      C.set_uniform_order(P_INIT);
-      phi.set_uniform_order(P_INIT);
+      Cspace.set_uniform_order(P_INIT);
+      phispace.set_uniform_order(P_INIT);
       int ndofs;
-      ndofs = C.assign_dofs();
-      phi.assign_dofs(ndofs);
+      ndofs = Cspace.assign_dofs();
+      phispace.assign_dofs(ndofs);
+
+      // project the fine mesh solution on the globally derefined mesh
+      info("---- Time step %d, projecting fine mesh solution on globally derefined mesh:\n", n);
+      nls.set_ic(&Csln_fine, &phisln_fine, &C_prev_newton, &phi_prev_newton, PROJ_TYPE);
+
+      if (NEWTON_ON_COARSE_MESH) {
+        // Newton's loop on the globally derefined mesh
+        info("---- Time step %d, Newton solve on globally derefined mesh:\n", n);
+        if (!nls.solve_newton_2(&C_prev_newton, &phi_prev_newton, NEWTON_TOL_COARSE, NEWTON_MAX_ITER))
+          error("Newton's method did not converge.");
+      }
+      Csln_coarse.copy(&C_prev_newton);
+      phisln_coarse.copy(&phi_prev_newton);
     } 
 
-    #ifdef VERBOSE
-    info("\n---- Time step %d ----", n);
-    #endif
-
-    int at = 0;
+    int at = 1;
     bool done = false;
     double err;
     do {
-      at++;
-      at_index++;
-      int it = 1;
-      double res_l2_norm;
-      if (n > 1 || at > 1) {
-        nls.set_ic(&Csln_fine, &phisln_fine, &Ci, &phii);
-      } else {
-        /* No need to set anything, already set. */
-        nls.set_ic(&Ci, &phii, &Ci, &phii);
-      }
-      //Loop for coarse mesh solution
-      do {
-        it++;
-
-        #ifdef VERBOSE
-        info("\n -------- Time step %d, Newton iter %d --------\n", n, it);
-        #endif
-
-        nls.assemble();
-        nls.solve(2, &Csln_coarse, &phisln_coarse);
-        res_l2_norm = nls.get_residuum_l2_norm();
-
-        #ifdef VERBOSE
-        info("Residuum L2 norm: %g\n", res_l2_norm);
-        #endif
-
-        Ci.copy(&Csln_coarse);
-        phii.copy(&phisln_coarse);
-      } while (res_l2_norm > NEWTON_TOL_COARSE);
-
-      it = 1;
       // Loop for fine mesh solution
       RefNonlinSystem rs(&nls);
       rs.prepare();
-      if (n > 1 || at > 1) {
-        rs.set_ic(&Csln_fine, &phisln_fine, &Ci, &phii);
-      } else {
-        rs.set_ic(&Ci, &phii, &Ci, &phii);
-      }
 
-      do {
-        it++;
+      if (at == 1) rs.set_ic(&Csln_coarse, &phisln_coarse, &C_prev_newton, &phi_prev_newton);
+      else rs.set_ic(&Csln_fine, &phisln_fine, &C_prev_newton, &phi_prev_newton);
+      
+      rs.solve_newton_2(&C_prev_newton, &phi_prev_newton, NEWTON_TOL_FINE, NEWTON_MAX_ITER);
+      Csln_fine.copy(&C_prev_newton);
+      phisln_fine.copy(&phi_prev_newton);
 
-        #ifdef VERBOSE
-        info("\n -------- Time step %d, Adaptivity step %d, Newton iter %d (Fine mesh) --------\n", n, at, it);
-        #endif
-
-        rs.assemble();
-        rs.solve(2, &Csln_fine, &phisln_fine);
-        res_l2_norm = rs.get_residuum_l2_norm();
-
-        #ifdef VERBOSE
-        info("Residuum L2 norm: %g\n", res_l2_norm);
-        #endif
-
-        Ci.copy(&Csln_fine);
-        phii.copy(&phisln_fine);
-      } while (res_l2_norm > NEWTON_TOL_REF);
+      sprintf(title, "phi Solution, time level %d, adapt step %d", n, at);
+      phiview.set_title(title);
+      AbsFilter mag(&phi_prev_newton);
+      phiview.show(&mag); 
+      sprintf(title, "C Solution, time level %d, adapt step %d", n, at);
+      Cview.set_title(title);
+      AbsFilter mag2(&C_prev_newton);
+      Cview.show(&mag2); 
 
       // Calculate element errors and total estimate
-      H1OrthoHP hp(2, &C, &phi);
+      H1OrthoHP hp(2, &Cspace, &phispace);
       info("\n Calculating element errors\n");
       err = hp.calc_error_2(&Csln_coarse, &phisln_coarse, &Csln_fine, &phisln_fine) * 100;
-      info("Error: %g", err);
+      info("Error: %g%%", err);
 
       if (err < ERR_STOP) {
         done = true;
       } else {
         hp.adapt(THRESHOLD, STRATEGY, ADAPT_TYPE);
+        int ndofs;
+        ndofs = Cspace.assign_dofs();
+        ndofs += phispace.assign_dofs(ndofs);
+        info("NDOFS after adapting: %d", ndofs);
+        if (ndofs >= NDOF_STOP) {
+          info("NDOFs reached to the max %d", NDOF_STOP);
+          done = true;
+        }
+
+        // project the fine mesh solution on the new coarse mesh
+        info("---- Time step %d, adaptivity step %d, projecting fine mesh solution on new coarse mesh:\n",
+            n, at);
+        nls.set_ic(&Csln_fine, &phisln_fine, &C_prev_newton, &phi_prev_newton, PROJ_TYPE);
+        at++;
+        if (NEWTON_ON_COARSE_MESH) {
+          // Newton's loop on the globally derefined mesh
+          info("---- Time step %d, Newton solve on globally derefined mesh:\n", n);
+          if (!nls.solve_newton_2(&C_prev_newton, &phi_prev_newton, NEWTON_TOL_COARSE, NEWTON_MAX_ITER))
+            error("Newton's method did not converge.");
+        }
+
+        Csln_coarse.copy(&C_prev_newton);
+        phisln_coarse.copy(&phi_prev_newton);
+
+
       }
 
-      int ndofs;
-      ndofs = C.assign_dofs();
-      ndofs += phi.assign_dofs(ndofs);
-      info("NDOFS after adapting: %d", ndofs);
-      if (ndofs >= NDOF_STOP) {
-        info("NDOFs reached to the max %d", NDOF_STOP);
-        done = true;
-      }
 
       sprintf(title, "hp-mesh (C), time level %d, adaptivity %d", n, at);
       Cordview.set_title(title);
       sprintf(title, "hp-mesh (phi), time level %d, adaptivity %d", n, at);
       phiordview.set_title(title);
-      Cordview.show(&C);
-      phiordview.show(&phi);
+      Cordview.show(&Cspace);
+      phiordview.show(&phispace);
       #ifdef SCREENSHOT
       Cordview.save_numbered_screenshot("screenshots/Cord%03d.bmp", at_index, true);
       phiordview.save_numbered_screenshot("screenshots/phiord%03d.bmp", at_index, true);
@@ -335,12 +338,9 @@ void solveAdaptive(Mesh &Cmesh, Mesh &phimesh, Mesh &basemesh, NonlinSystem &nls
       
 
     } while (!done);
-    phip.copy(&phii);
-    Cp.copy(&Ci);
-
     graph_err.add_values(0, n, err);
     graph_err.save("error.gp");
-    graph_dof.add_values(0, n, C.get_num_dofs() + phi.get_num_dofs());
+    graph_dof.add_values(0, n, Cspace.get_num_dofs() + phispace.get_num_dofs());
     graph_dof.save("dofs.gp");
     if (n == 1) {
       sprintf(title, "phi after time step %d, adjust the graph and PRESS ANY KEY", n);
@@ -348,14 +348,14 @@ void solveAdaptive(Mesh &Cmesh, Mesh &phimesh, Mesh &basemesh, NonlinSystem &nls
       sprintf(title, "phi after time step %d", n);
     }
     phiview.set_title(title);
-    phiview.show(&phii);
+    phiview.show(&phi_prev_newton);
     if (n == 1) {
       sprintf(title, "C after time step %d, adjust the graph and PRESS ANY KEY", n);
     } else {
       sprintf(title, "C after time step %d", n);
     }
     Cview.set_title(title);
-    Cview.show(&Ci);
+    Cview.show(&C_prev_newton);
     #ifdef SCREENSHOT
     Cview.save_numbered_screenshot("screenshots/C%03d.bmp", n, true);
     phiview.save_numbered_screenshot("screenshots/phi%03d.bmp", n, true);
@@ -365,6 +365,8 @@ void solveAdaptive(Mesh &Cmesh, Mesh &phimesh, Mesh &basemesh, NonlinSystem &nls
       // which is way more informative in case of Nernst Planck
       Cview.wait_for_keypress();
     }
+    phi_prev_time.copy(&phisln_fine);
+    C_prev_time.copy(&Csln_fine);
 
   }
   View::wait();
