@@ -1,4 +1,0 @@
-rm *~ 
-line-sing
-python plot_graph.py &
-

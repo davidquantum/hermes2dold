@@ -9,8 +9,8 @@ in the source code.
 Saphir
 ------
 
-More information to this example can be found in the corresponding 
-`main.cpp <http://hpfem.org/git/gitweb.cgi/hermes2d.git/blob/HEAD:/examples/saphir/main.cpp>`_ file.
+**Git reference:** Example `saphir <http://hpfem.org/git/gitweb.cgi/hermes2d.git/tree/HEAD:/examples/saphir>`_.
+
 This is a standard nuclear engineering benchmark (IAEA number EIR-2) describing 
 an external-force-driven configuration without fissile materials present, using one-group 
 neutron diffusion approximation
@@ -150,8 +150,8 @@ CPU time convergence graphs:
 Iron-Water
 ----------
 
-More information to this example can be found in the corresponding 
-`main.cpp <http://hpfem.org/git/gitweb.cgi/hermes2d.git/blob/HEAD:/examples/iron-water/main.cpp>`_ file.
+**Git reference:** Example `iron-water <http://hpfem.org/git/gitweb.cgi/hermes2d.git/tree/HEAD:/examples/iron-water>`_.
+
 This example is very similar to the example "saphir", the main difference being that 
 it reads a mesh file in the exodusii format (created by Cubit). This example only builds 
 if you have the `ExodusII <http://sourceforge.net/projects/exodusii/>`_ and 
@@ -252,8 +252,8 @@ CPU time convergence graphs:
 Nernst-Planck
 -------------
 
-More information to this example can be found in the corresponding 
-`main.cpp <http://hpfem.org/git/gitweb.cgi/hermes2d.git/blob/HEAD:/examples/newton-np-timedep-adapt-system/main.cpp>`_ file.
+**Git reference:** Example `newton-np-timedep-adapt-system <http://hpfem.org/git/gitweb.cgi/hermes2d.git/tree/HEAD:/examples/newton-np-timedep-adapt-system>`_.
+
 The example is concerned with the finite element solution 
 of the Poisson and Nernst-Planck equation system. The Nernst-Planck
 equation is often used to describe the diffusion, convection,
@@ -620,8 +620,8 @@ To be added soon.
 Crack
 -----
 
-More information to this example can be found in the corresponding 
-`main.cpp <http://hpfem.org/git/gitweb.cgi/hermes2d.git/blob/HEAD:/examples/crack/main.cpp>`_ file.
+**Git reference:** Example `crack <http://hpfem.org/git/gitweb.cgi/hermes2d.git/tree/HEAD:/examples/crack>`_.
+
 The example employs the adaptive multimesh hp-FEM to solve the 
 equations of linear elasticity. The domain contains two horizontal 
 cracks causing strong singularities at their corners. Each
@@ -823,8 +823,8 @@ The same comparison in terms of CPU time:
 Thermoelasticity
 ----------------
 
-More information to this example can be found in the corresponding 
-`main.cpp <http://hpfem.org/git/gitweb.cgi/hermes2d.git/blob/HEAD:/examples/thermoelasticity/main.cpp>`_ file.
+**Git reference:** Example `thermoelasticity <http://hpfem.org/git/gitweb.cgi/hermes2d.git/tree/HEAD:/examples/thermoelasticity>`_.
+
 The example deals with a massive hollow conductor is heated by induction and 
 cooled by water running inside. We will model this problem using linear thermoelasticity 
 equations, where the x-displacement, y-displacement, and the temperature will be approximated 
@@ -1050,7 +1050,7 @@ Final meshes for $u_1$, $u_2$ and $T$ (h-FEM with quadratic elements):
 
 DOF convergence graphs:
 
-.. image:: img/crack/conv_dof.png
+.. image:: img/thermoelasticity/conv_dof.png
    :align: center
    :width: 600
    :height: 400
@@ -1074,24 +1074,221 @@ h-FEM:
    :alt: DOF convergence graph.
 
 
+Singular Perturbation
+---------------------
+
+**Git reference:** Example `singular-perturbation <http://hpfem.org/git/gitweb.cgi/hermes2d.git/tree/HEAD:/examples/singular-perturbation>`_.
+
+We solve a singularly perturbed elliptic problem that exhibits a thin anisotropic boundary layer that is 
+difficult to resolve. 
+
+The computational domain is the unit square, and the equation solved has the form
+
+.. math::
+ 
+    -\Delta u + K^2 u = K^2.
+
+The boundary conditions are homogeneous Dirichlet. The right-hand side is chosen in this way 
+in order to keep the solution $u(x,y) \approx 1$ inside the domain. For this presentation 
+we choose $K^2 = 10^4$ but everything works for larger values of $K$ as well. We find quite 
+important to perform initial refinements towards the boundary, thus providing a better 
+initial mesh for adaptivity. One does not have to do this, but then the convergence is slower. 
+The solution is shown in the following figure:
+
+.. image:: img/singular-perturbation/sol_3d_view.png
+   :align: center
+   :width: 500
+   :alt: Domain.
+
+Below we show meshes obtained using various types of adaptivity. The meshes do not correspond to 
+the same level of accuracy since the low-order methods could not achieve the same error 
+as hp-FEM. Therefore, compare not only the number of DOF but also the error level. 
+Convergence graphs for all cases are shown at the end of this section.
+
+Final mesh (h-FEM, p=1, anisotropic refinements): 34833 DOF, error 0.3495973568992 %
+
+.. image:: img/singular-perturbation/mesh-h1-aniso.png
+   :align: center
+   :width: 500
+   :height: 400
+   :alt: Final mesh
+
+Final mesh (h-FEM, p=2, anisotropic refinements): 37097 DOF, error 0.014234904418008 %
+
+.. image:: img/singular-perturbation/mesh-h2-aniso.png
+   :align: center
+   :width: 500
+   :height: 400
+   :alt: Final mesh
+
+Final mesh (hp-FEM, anisotropic refinements): 6821 DOF, error 7.322784149253e-05 %
+
+.. image:: img/singular-perturbation/mesh-hp-aniso.png
+   :align: center
+   :width: 500
+   :height: 400
+   :alt: Final mesh
+
+DOF convergence graphs for h-FEM with linear and quadratic elements and the hp-FEM (anisotropic 
+refinements enabled):
+
+.. image:: img/singular-perturbation/conv_dof_compar.png
+   :align: center
+   :width: 600
+   :height: 400
+   :alt: DOF convergence graph.
+
+Corresponding CPU time convergence graphs:
+
+.. image:: img/singular-perturbation/conv_cpu_compar.png
+   :align: center
+   :width: 600
+   :height: 400
+   :alt: CPU convergence graph.
+
+And at the end let us compare hp-FEM with isotropic and anisotropic refinements:
+
+.. image:: img/singular-perturbation/conv_dof_hp.png
+   :align: center
+   :width: 600
+   :height: 400
+   :alt: DOF convergence graph.
+
+Corresponding CPU time convergence graphs:
+
+.. image:: img/singular-perturbation/conv_cpu_hp.png
+   :align: center
+   :width: 600
+   :height: 400
+   :alt: CPU convergence graph.
+
+When using h-FEM, this difference becomes much larger. This is left for the reader
+to try.
 
 
+Bracket
+-------
+
+**Git reference:** Example `bracket <http://hpfem.org/git/gitweb.cgi/hermes2d.git/tree/HEAD:/examples/bracket>`_.
+
+We will use the equations of linear elasticity from example 
+`08-system <http://hpfem.org/git/gitweb.cgi/hermes2d.git/tree/HEAD:/tutorial/08-system>`_, but
+now we will view them as a coupled PDE system.
+Our domain is a bracket loaded on its top edge and fixed to the wall:
+
+.. math::
+    :nowrap:
+
+    \begin{eqnarray*}   \bfu \!&=&\! 0 \ \ \ \ \ \rm{on}\ \Gamma_1  \\   \dd{u_2}{n} \!&=&\! f \ \ \ \ \ \rm{on}\ \Gamma_2 \\   \dd{u_1}{n} = \dd{u_2}{n} \!&=&\! 0 \ \ \ \ \ \rm{elsewhere.} \end{eqnarray*}
+
+The dimensions are L = 0.7 m, T = 0.1 m and the force $f = 10^3$ N.
+
+.. image:: img/bracket.png
+   :align: center
+   :width: 400
+   :height: 400
+   :alt: Computational domain for the elastic bracket problem.
+
+As usual, adaptivity is based on the difference between the coarse and fine mesh solutions.
+This time we have two equations in the system, two meshes, two spaces, etc.
+Instead of calc_error() we use the method calc_energy_error(), also a member of the
+class H1OrthoHP:
+::
+
+    H1OrthoHP hp(2, &xdisp, &ydisp);
+    hp.set_biform(0, 0, bilinear_form_0_0<scalar, scalar>, bilinear_form_0_0<Ord, Ord>);
+    hp.set_biform(0, 1, bilinear_form_0_1<scalar, scalar>, bilinear_form_0_1<Ord, Ord>);
+    hp.set_biform(1, 0, bilinear_form_1_0<scalar, scalar>, bilinear_form_1_0<Ord, Ord>);
+    hp.set_biform(1, 1, bilinear_form_1_1<scalar, scalar>, bilinear_form_1_1<Ord, Ord>);
+    double err_est = hp.calc_error_2(&x_sln_coarse, &y_sln_coarse, &x_sln_fine, &y_sln_fine) * 100;
+
+The following figures show the two meshes and their polynomial
+degrees after several adaptive steps: 
+
+.. image:: img/sys-xorders.png
+   :align: left
+   :width: 300
+   :height: 300
+   :alt: $x$ displacement -- mesh and polynomial degrees.
+
+.. image:: img/sys-yorders.png
+   :align: right
+   :width: 300
+   :height: 300
+   :alt: $y$ displacement -- mesh and polynomial degrees.
+
+.. raw:: html
+
+   <hr style="clear: both; visibility: hidden;">
+
+
+Note that the meshes are slightly different, not only in
+polynomial degrees, but also in element refinements. This is possible in Hermes thanks to
+a technique called multi-mesh assembling which allows
+all components of the solution to adapt independently. In problems whose components exhibit
+substantially different behavior, one may even obtain completely different meshes.
+
+Convergence graphs of adaptive h-FEM with linear elements, h-FEM with quadratic elements
+and hp-FEM are shown below.
+
+.. image:: img/bracket/conv_dof.png
+   :align: center
+   :width: 600
+   :height: 400
+   :alt: DOF convergence graph for tutorial example 11-adapt-system.
+
+The following graph shows convergence in terms of CPU time. 
+
+.. image:: img/bracket/conv_cpu.png
+   :align: center
+   :width: 600
+   :height: 400
+   :alt: CPU convergence graph for tutorial example 11-adapt-system.
+
+Comparison of the multimesh and single-mesh hp-FEM: 
+
+.. image:: img/bracket/conv_compar_dof.png
+   :align: center
+   :width: 600
+   :height: 400
+   :alt: comparison of multimesh and single mesh hp-FEM
+
+.. image:: img/bracket/conv_compar_cpu.png
+   :align: center
+   :width: 600
+   :height: 400
+   :alt: comparison of multimesh and single mesh hp-FEM
+
+In this example the difference between the multimesh *hp*-FEM and the single-mesh
+version was not extremely large since the two elasticity equations are very 
+strongly coupled and have singularities at the same points. 
+For other applications of the multimesh hp-FEM see a `linear elasticity model with cracks 
+<http://hpfem.org/hermes2d/doc/src/examples.html#crack>`_, 
+a `thermoelasticity example <http://hpfem.org/hermes2d/doc/src/examples.html#thermoelasticity>`_,
+and especially the tutorial 
+example `11-adapt-system <http://hpfem.org/hermes2d/doc/src/tutorial.html#adaptivity-for-systems-and-the-multimesh-hp-fem>`_.
+
+Wire
+----
+
+**Git reference:** Example `wire <http://hpfem.org/git/gitweb.cgi/hermes2d.git/tree/HEAD:/examples/wire>`_.
+
+
+Description coming soon.
 
 
 
 Waveguide
 ---------
 
-To be added soon.
+
+**Git reference:** Example `waveguide <http://hpfem.org/git/gitweb.cgi/hermes2d.git/tree/HEAD:/examples/waveguide>`_.
+
+
+Description coming soon.
 
 
 
-
-
-Wire
-----
-
-To be added soon.
 
 
 

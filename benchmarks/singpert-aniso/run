@@ -1,4 +1,0 @@
-rm *~ 
-singpert-aniso
-python plot_graph.py &
-

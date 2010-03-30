@@ -32,7 +32,7 @@
 /// If not specifie by the used, this class uses the most accurate adaptivity
 /// selection algorithm which is slow.
 ///
-class PUBLIC_API H1AdaptHP
+class HERMES2D_API H1AdaptHP
 {
 public:
 
@@ -45,7 +45,7 @@ public:
   virtual ~H1AdaptHP();
 
   /// \deprecated Old-style and type-unsafe constructor.
-  H1AdaptHP(int num, ...); 
+  H1AdaptHP(int num, ...);
 
   typedef scalar (*biform_val_t) (int n, double *wt, Func<scalar> *u, Func<scalar> *v, Geom<double> *e, ExtData<scalar> *);
   typedef Ord (*biform_ord_t) (int n, double *wt, Func<Ord> *u, Func<Ord> *v, Geom<Ord> *e, ExtData<Ord> *);

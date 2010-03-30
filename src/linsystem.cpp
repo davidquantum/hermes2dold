@@ -57,11 +57,11 @@ static int default_order_table_quad[] =
 };
 #endif
 
-PUBLIC_API int  g_max_order;
-PUBLIC_API int  g_safe_max_order;
+HERMES2D_API int  g_max_order;
+HERMES2D_API int  g_safe_max_order;
 int* g_order_table_quad = default_order_table_quad;
 int* g_order_table_tri  = default_order_table_tri;
-PUBLIC_API int* g_order_table = NULL;
+HERMES2D_API int* g_order_table = NULL;
 bool warned_order = false;
 //extern bool warned_order;
 extern void update_limit_table(int mode);
@@ -332,7 +332,7 @@ void LinSystem::create_matrix(bool rhsonly)
   for (int i = 0; i < wf->neq; i++)
     ndofs += spaces[i]->get_num_dofs();
   if (!ndofs)
-    error("ndofs cannot not be 0.");
+    error("zero matrix size.");
 
   // get row and column indices of nonzero matrix elements
   Page** pages = new Page*[ndofs];
@@ -353,7 +353,7 @@ void LinSystem::create_matrix(bool rhsonly)
     pos += sort_and_store_indices(pages[i], Ai + pos, Ai + aisize);
   }
   Ap[i] = pos;
-  verbose("  (dofs: %d, nnz: %d, size: %0.1lf MB, time: %g sec)",
+  verbose("  (ndof: %d, nnz: %d, size: %0.1lf MB, time: %g sec)",
           ndofs, pos, (double) get_matrix_size() / (1024*1024), end_time());
   delete [] pages;
 
@@ -862,7 +862,7 @@ scalar LinSystem::eval_form(WeakForm::LiFormVol *lf, PrecalcShapeset *fv, RefMap
 
 
 // Actual evaluation of surface bilinear form (calculates integral)
-scalar LinSystem::eval_form(WeakForm::BiFormSurf *bf, PrecalcShapeset *fu, 
+scalar LinSystem::eval_form(WeakForm::BiFormSurf *bf, PrecalcShapeset *fu,
                             PrecalcShapeset *fv, RefMap *ru, RefMap *rv, EdgePos* ep)
 {
   // eval the form
@@ -892,8 +892,8 @@ scalar LinSystem::eval_form(WeakForm::BiFormSurf *bf, PrecalcShapeset *fu,
 
   ext->free(); delete ext;
   return 0.5 * res; // Edges are parameterized from 0 to 1 while integration weights
-                    // are defined in (-1, 1). Thus multiplying with 0.5 to correct 
-                    // the weights. 
+                    // are defined in (-1, 1). Thus multiplying with 0.5 to correct
+                    // the weights.
 }
 
 
@@ -926,8 +926,8 @@ scalar LinSystem::eval_form(WeakForm::LiFormSurf *lf, PrecalcShapeset *fv, RefMa
 
   ext->free(); delete ext;
   return 0.5 * res; // Edges are parametrized from 0 to 1 while integration weights
-                    // are defined in (-1, 1). Thus multiplying with 0.5 to correct 
-                    // the weights. 
+                    // are defined in (-1, 1). Thus multiplying with 0.5 to correct
+                    // the weights.
 }
 
 
@@ -1049,7 +1049,7 @@ void LinSystem::save_rhs_bin(const char* filename)
 
 //// order limitation and warning //////////////////////////////////////////////////////////////////
 
-PUBLIC_API void set_order_limit_table(int* tri_table, int* quad_table, int n)
+HERMES2D_API void set_order_limit_table(int* tri_table, int* quad_table, int n)
 {
   if (n < 24) error("Order limit tables must have at least 24 entries.");
   g_order_table_tri  = tri_table;
@@ -1057,7 +1057,7 @@ PUBLIC_API void set_order_limit_table(int* tri_table, int* quad_table, int n)
 }
 
 
-PUBLIC_API void update_limit_table(int mode)
+HERMES2D_API void update_limit_table(int mode)
 {
   g_quad_2d_std.set_mode(mode);
   g_max_order = g_quad_2d_std.get_max_order();
@@ -1066,9 +1066,9 @@ PUBLIC_API void update_limit_table(int mode)
 }
 
 
-PUBLIC_API void warn_order()
+HERMES2D_API void warn_order()
 {
-  if (!warned_order && warn_integration)
+  if (!warned_order)
   {
     warn("Not enough integration rules for exact integration.");
     warned_order = true;

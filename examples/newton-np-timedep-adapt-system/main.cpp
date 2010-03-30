@@ -51,7 +51,7 @@ const double eps = 2.5e-2; 	            // [F/m] Electric permeability
 const double mu = D / (R * T);              // Mobility of ions
 const double z = 1;		            // Charge number
 const double K = z * mu * F;                // Constant for equation
-const double L =  F / eps;	            // Constant for equation 
+const double L =  F / eps;	            // Constant for equation
 const double VOLTAGE = 1;	            // [V] Applied voltage
 const double C_CONC = 1200;	            // [mol/m^3] Anion and counterion concentration
 
@@ -104,7 +104,7 @@ const int NDOF_STOP = 5000;		          // To prevent adaptivity from going on fo
 const double ERR_STOP = 0.1;            // Stopping criterion for adaptivity (rel. error tolerance between the
                                         // fine mesh and coarse mesh solution in percent).
 
-// Program parameters 
+// Program parameters
 const std::string USE_ADAPTIVE("adapt");
 
 // Weak forms
@@ -204,7 +204,6 @@ void solveAdaptive(Mesh &Cmesh, Mesh &phimesh, Mesh &basemesh, NonlinSystem &nls
   ScalarView phiview("Voltage [V]", 650, 0, 600, 600);
   OrderView Cordview("C order", 0, 300, 600, 600);
   OrderView phiordview("Phi order", 600, 300, 600, 600);
-  
 
   // convergence graph wrt. the number of degrees of freedom
   GnuplotGraph graph_err;
@@ -335,7 +334,7 @@ void solveAdaptive(Mesh &Cmesh, Mesh &phimesh, Mesh &basemesh, NonlinSystem &nls
       phiordview.save_numbered_screenshot("screenshots/phiord%03d.bmp", at_index, true);
       #endif
 
-      
+
 
     } while (!done);
     graph_err.add_values(0, n, err);
@@ -414,12 +413,12 @@ int main (int argc, char* argv[]) {
   phi.set_bc_types(phi_bc_types);
   phi.set_bc_values(phi_bc_values);
   //C.set_bc_values(C_bc_values);
-  
+
   // set polynomial degrees
   C.set_uniform_order(P_INIT);
   phi.set_uniform_order(P_INIT);
-  
-  
+
+
   // assign degrees of freedom
   int ndofs = 0;
   ndofs += C.assign_dofs(ndofs);
@@ -455,7 +454,6 @@ int main (int argc, char* argv[]) {
   wf.add_biform(1, 0, callback(J_euler_DFphiDYc), UNSYM);
   wf.add_liform(1, callback(Fphi_euler), ANY, 2, &Ci, &phii);
 
-  
   // Nonlinear solver
   UmfpackSolver umfpack;
   NonlinSystem nls(&wf, &umfpack);
@@ -465,7 +463,7 @@ int main (int argc, char* argv[]) {
   } else {
     nls.set_pss(1, &Cpss);
   }
-  
+
   info("UmfpackSolver initialized");
 
 

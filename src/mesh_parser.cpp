@@ -181,7 +181,7 @@ static void init_symbols()
   add_built_in("floor", floor);
   add_built_in("mod", fmod);
   add_built_in("fmod", fmod);
-  
+
   // add the constants pi and PI
   add_const("pi", M_PI);
   add_const("PI", M_PI);
@@ -406,8 +406,9 @@ static void assignment(bool debug)
 
   // print numerical temporary variables
   if (debug)
-    if (sym->data->n < 0)
+    if (sym->data->n < 0) {
       info("%s = %.18g", sym->name, sym->data->val);
+    }
 }
 
 

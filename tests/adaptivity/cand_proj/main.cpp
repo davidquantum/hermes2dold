@@ -37,13 +37,13 @@ struct TestCase {
   };
   bool is_match(const ElementToRefine& refin) { ///< Returns true in a case of a match.
     if (res_split != refin.split) {
-      log_msg("E split type %d does not match, expected %d", res_split, refin.split);
+      info("split type %d does not match, expected %d", res_split, refin.split);
       return false;
     }
     int num_sons = refin.get_num_sons();
     for(int i = 0; i < num_sons; i++) {
       if (res_orders[i] != refin.p[i]) {
-        log_msg("E order (%d, %d) of son %d does not match, expected (%d, %d)"
+        info("order (%d, %d) of son %d does not match, expected (%d, %d)"
           , get_h_order(refin.p[i]), get_v_order(refin.p[i])
           , i
           , get_h_order(res_orders[i]), get_v_order(res_orders[i]));
@@ -119,7 +119,7 @@ bool init(bool tri) {
       int3 marker_array[4] = {{0, 1, 3}, {1, 2, 2}, {2, 3, 4}, {3, 0, 1}};
       mesh->create(vertex_num, vertex_array, tria_num, tria_array, quad_num, quad_array, marker_num, marker_array);
     }
-    
+
     // finite element space
     space = new H1Space(mesh, shapeset);
     space->set_bc_types(bc_types);
@@ -151,7 +151,7 @@ bool init(bool tri) {
     return true;
   }
   catch (std::exception& e) {
-    log_msg("E %s", e.what());
+    info("failed: %s", e.what());
     return false;
   }
 }
@@ -176,7 +176,7 @@ int test() {
   while(iter != test_cases.end()){
     //set a current function and print info
     cur_test_case = &(*iter);
-    log_msg("T %s", cur_test_case->title.c_str());
+    info("test case: %s", cur_test_case->title.c_str());
 
     //change mesh
     space->set_element_order(H2D_TEST_ELEM_ID, cur_test_case->start_quad_order);
@@ -199,8 +199,8 @@ int test() {
     selector.select_refinement(e, order, &rsln, refinement);
 
     //check selected candidate
-    if (cur_test_case->is_match(refinement)) {      
-      log_msg("  selected candidate: correct");
+    if (cur_test_case->is_match(refinement)) {
+      info("  selected candidate: correct");
 
       //check if all candidates with higher orders has zero error
       int min_order_h = get_h_order(cur_test_case->func_quad_order);
@@ -220,15 +220,16 @@ int test() {
         if (valid && cand->error > H2D_TEST_ZERO) {
           std::stringstream str;
           str << "  " << *cand;
-          log_msg("%s", str.str().c_str());
+          info("%s", str.str().c_str());
           failed = true;
         }
 
         //next candidate
         cand++;
       }
-      if (!failed)
-        log_msg("  candidate projection: correct");
+      if (!failed) {
+        info("  candidate projection: correct");
+      }
     }
     else
       failed = true;

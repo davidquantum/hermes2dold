@@ -56,7 +56,7 @@ enum ViewPaletteType {
 /// to provide zooming and panning capabilities for use by the descendant
 /// classes, etc.
 ///
-class PUBLIC_API View
+class HERMES2D_API View
 {
 public:
 
@@ -134,7 +134,7 @@ protected: //view
   virtual void on_entry(int state) {}
   virtual void on_close();
 
-  virtual void reset_view(bool force_reset = false); ///< Resets view based on the axis-aligned bounding box of the mesh. Assumes that the bounding box is set up. Does not reset if view_not_reset is false.
+  virtual void reset_view(bool force_reset); ///< Resets view based on the axis-aligned bounding box of the mesh. Assumes that the bounding box is set up. Does not reset if view_not_reset is false.
   virtual void update_layout(); ///< Updates layout, i.e., centers mesh.
 
 protected:
@@ -213,7 +213,7 @@ protected: //internal functions
 
 #else // NOGLUT
 
-class PUBLIC_API View
+class HERMES2D_API View
 {
 public:
   View() {}

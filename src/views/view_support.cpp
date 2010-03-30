@@ -185,15 +185,15 @@ static int call_in_thread(CTC_FUNC func, void* param) {
 /// Sets a title of a view. Function has to be called just from the inside of view thread with a locked sync_view.
 static int set_view_title_in_thread(void* title_pars_ptr)
 {
-  debug_assert(!need_safe_call(), "E set_view_title_in_thread called from other thread.");
+  assert_msg(!need_safe_call(), "E set_view_title_in_thread called from other thread.");
   TitleParams& title_params = *((TitleParams*)title_pars_ptr);
   std::map<int, View*>::iterator found_view = view_instances.find(title_params.view_id);
-  //debug_assert(found_view != view_instances.end(), "E removing of a view that is not registered");
+  //assert_msg(found_view != view_instances.end(), "E removing of a view that is not registered");
   if (found_view == view_instances.end()) {
     debug_log("W settings title of a view that is not registered.");
     return -1;
   }
- 
+
   //create GLUT window
   glutSetWindow(title_params.view_id);
   glutSetWindowTitle(title_params.title);
@@ -204,7 +204,7 @@ static int set_view_title_in_thread(void* title_pars_ptr)
 /// Adds a new view. Function has to be called just from the inside of view thread with a locked sync_view.
 int add_view_in_thread(void* view_pars_ptr)
 {
-  debug_assert(!need_safe_call(), "E add_view_in_thread called from other thread.");
+  assert_msg(!need_safe_call(), "E add_view_in_thread called from other thread.");
   ViewParams& view_params = *((ViewParams*)view_pars_ptr);
 
   //create GLUT window
@@ -215,12 +215,8 @@ int add_view_in_thread(void* view_pars_ptr)
 
   //initialize GLEW
   GLenum err = glewInit();
-  if (err != GLEW_OK) {
-    log_msg("E GLEW error: %s", glewGetErrorString(err));
-  }
-  else {
-    glew_initialized = true;
-  }
+  error_if(err != GLEW_OK, "GLEW error: %s", glewGetErrorString(err));
+  glew_initialized = true;
 
   //register callbacks
   glutDisplayFunc(on_display_stub);
@@ -245,10 +241,10 @@ int add_view_in_thread(void* view_pars_ptr)
 /// Removes a new view. Function has to be called just from the inside of view thread with a locked sync_view.
 int remove_view_in_thread(void* remove_params_ptr)
 {
-  debug_assert(!need_safe_call(), "E remove_view_in_thread called from other thread.");
+  assert_msg(!need_safe_call(), "E remove_view_in_thread called from other thread.");
   RemoveParams& params = *(RemoveParams*)remove_params_ptr;
   std::map<int, View*>::iterator found_view = view_instances.find(params.view_id);
-  //debug_assert(found_view != view_instances.end(), "E removing of a view that is not registered");
+  //assert_msg(found_view != view_instances.end(), "E removing of a view that is not registered");
   if (found_view == view_instances.end()) {
     debug_log("W removing of a view that is not registered\n");
     return -1;
@@ -288,10 +284,10 @@ int remove_view_in_thread(void* remove_params_ptr)
 
 /// Forces a redisplay of a view. Function has to be called just from the inside of view thread.
 static int refresh_view_in_thread(void* view_id_ptr) {
-  debug_assert(!need_safe_call(), "E refresh_view_in_thread called from other thread.");
+  assert_msg(!need_safe_call(), "E refresh_view_in_thread called from other thread.");
   int view_id = *((int*)view_id_ptr);
   std::map<int, View*>::iterator found_view = view_instances.find(view_id);
-  debug_assert(found_view != view_instances.end(), "E refreshing a view that is not registered");
+  assert_msg(found_view != view_instances.end(), "E refreshing a view that is not registered");
 
   //redisplay
   if (found_view != view_instances.end()) {
@@ -333,13 +329,13 @@ void on_mouse_click_stub(int button, int state, int x, int y) {
         wnd->on_right_mouse_double_click(x, y);
       else
         wnd->on_middle_mouse_double_click(x, y);
-        
+
       last_tick = 0;
       return;
     }
     last_tick = tick;
   }
-  
+
   // call proper click handler
   if (button == GLUT_LEFT_BUTTON)
   {
@@ -370,7 +366,7 @@ void on_close_stub() {
 
   //call callback
   wnd->on_close();
-  
+
   //remove view from system
   view_sync.enter();
   RemoveParams params(glutGetWindow(), false);
@@ -408,19 +404,19 @@ static bool shutdown_glut()
 }
 
 /* public functions */
-void set_view_title(int view_id, const char* title) { 
+void set_view_title(int view_id, const char* title) {
   TitleParams params(view_id, title);
   call_in_thread(set_view_title_in_thread, &params);
 }
 
 int add_view(View* view, int x, int y, int width, int height, const char* title) {
-  ViewParams params(view, x, y, width, height, title);  
+  ViewParams params(view, x, y, width, height, title);
   return call_in_thread(add_view_in_thread, &params);
 }
 
 void refresh_view(int view_id) { call_in_thread(refresh_view_in_thread, &view_id); }
 
-void remove_view(int view_id) { 
+void remove_view(int view_id) {
   RemoveParams params(view_id, true);
   call_in_thread(remove_view_in_thread, &params);
 }
@@ -430,7 +426,7 @@ void force_view_thread_shutdown() {
   bool should_wait = false;
 
   view_sync.enter();
-  
+
   //destroy all views
   std::map<int, View*>::const_iterator iter = view_instances.begin();
   while (iter != view_instances.end()) {

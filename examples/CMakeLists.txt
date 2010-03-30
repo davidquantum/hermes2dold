@@ -7,6 +7,7 @@ if(NOT UMFPACK_NO_BLAS)
 endif(NOT UMFPACK_NO_BLAS)
 
 # examples
+add_subdirectory(bracket)
 add_subdirectory(crack)
 add_subdirectory(newton-np-timedep-adapt-system)
 add_subdirectory(iron-water)
@@ -14,10 +15,12 @@ add_subdirectory(saphir)
 add_subdirectory(thermoelasticity)
 add_subdirectory(waveguide)
 add_subdirectory(wire)
+add_subdirectory(linear-advection-diffusion)
 add_subdirectory(hdiv)
 add_subdirectory(l2)
 add_subdirectory(ns-timedep-adapt)
 add_subdirectory(neutronics-4-group)
+add_subdirectory(singular-perturbation)
 
 
 if(WITH_TRILINOS)

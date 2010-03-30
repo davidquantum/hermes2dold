@@ -98,7 +98,7 @@ enum
 ///
 /// The handling of irregular meshes is desribed in H1Space and HcurlSpace.
 ///
-class PUBLIC_API Space
+class HERMES2D_API Space
 {
 public:
 
@@ -216,7 +216,7 @@ public: //DEBUG
   int nsize, ndata_allocated; ///< number of items in ndata, allocated space
   ElementData* edata; ///< element data table
   int esize;
-  
+
 protected: //DEBUG
   virtual int get_edge_order_internal(Node* en);
 
@@ -258,8 +258,8 @@ protected: //DEBUG
   /// the DOFs have been assigned.
   virtual void post_assign() {}
 
-  PUBLIC_API_USED_STL_VECTOR(void*);
-  std::vector<void*> extra_data;    
+  HERMES2D_API_USED_STL_VECTOR(void*);
+  std::vector<void*> extra_data;
   void free_extra_data();
 
   void propagate_zero_orders(Element* e);

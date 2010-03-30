@@ -45,7 +45,7 @@
 ///
 /// ScalarView is a visualization window for all scalar-valued PDE solutions.
 ///
-class PUBLIC_API ScalarView : public View
+class HERMES2D_API ScalarView : public View
 {
 public:
 
@@ -80,10 +80,10 @@ protected: // node selection
     int id; ///< id of the node
     bool selected; ///< true if the node is selected
     TwBar* tw_bar; ///< a pointer to a gui window (CTwBar*) (GUI only).
-    VertexNodeInfo() {}; ///< An empty default constructor to limit time 
+    VertexNodeInfo() {}; ///< An empty default constructor to limit time
     VertexNodeInfo(int id, float x, float y) : id(id), x(x), y(y), selected(false), tw_bar(NULL) {};
   };
-  PUBLIC_API_USED_STL_VECTOR(VertexNodeInfo);
+  HERMES2D_API_USED_STL_VECTOR(VertexNodeInfo);
   std::vector<VertexNodeInfo> vertex_nodes; ///< Vertex nodes. Sorted accordin to the X-axis.
   VertexNodeInfo* pointed_vertex_node; ///< A vertex node that is under the mouse cursor. NULL if none.
 
@@ -110,7 +110,7 @@ protected: //element nfo
     ElementInfo() : x(0), y(0), id(-1), width(0), height(0) {};
     ElementInfo(int id, float x, float y, float width, float height) : x(x), y(y), id(id), width(width), height(height) {};
   };
-  PUBLIC_API_USED_STL_VECTOR(ElementInfo);
+  HERMES2D_API_USED_STL_VECTOR(ElementInfo);
   std::vector<ElementInfo> element_infos; ///< Element info.
 
   unsigned int element_id_widget; ///> A GL display-list denoting a element ID widget. The geometry assumes the size of a pixel is 1x1.
@@ -124,7 +124,7 @@ protected: //element nfo
 protected: //GUI
   int tw_wnd_id; ///< tw window ID
   TwBar* tw_setup_bar; ///< setup bar
-  
+
   virtual void create_setup_bar(); ///< create setup bar. Assumes that current window is set
 
 protected: //values
@@ -150,11 +150,11 @@ protected: //values
   int max_gl_verts; ///< A maximum allocated number of vertices
   int max_gl_tris; ///< A maximum allocated number of triangles
   int gl_tri_cnt; ///< A number of OpenGL triangles
-  
+
   bool show_values; ///< true to show values
 
   void prepare_gl_geometry(const double value_min, const double value_irange); ///< prepares geometry in a form compatible with GL arrays; Data are updated if lin is updated. In a case of a failure (out of memory), gl_verts is NULL and an old OpenGL rendering method has to be used.
-  void draw_values_2d(const double value_min, const double value_irange); ///< draws values 
+  void draw_values_2d(const double value_min, const double value_irange); ///< draws values
   void draw_edges_2d(); ///< draws edges
 
   void draw_normals_3d(); ////< Draws normals of the 3d mesh. Used for debugging purposses only.
@@ -190,7 +190,7 @@ protected:
   double vertices_avg_value; ///< Average value of a vertex. Used to center the mesh.
   double3* normals;
 
-  virtual void reset_view(bool force_reset = false); ///< Resets 2d and 3d view.
+  virtual void reset_view(bool force_reset); ///< Resets 2d and 3d view.
   virtual void update_layout(); ///< Updates layout, i.e., centers 2d and 3d mesh.
 
   void draw_tri_contours(double3* vert, int3* tri);
@@ -218,7 +218,7 @@ protected:
 
 #else // NOGLUT
 
-class PUBLIC_API ScalarView : public View
+class HERMES2D_API ScalarView : public View
 {
 public:
   ScalarView(const char* title = "ScalarView", DEFAULT_WINDOW_POS) {}
