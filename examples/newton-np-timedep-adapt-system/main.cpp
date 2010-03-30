@@ -53,7 +53,7 @@ const double z = 1;		            // Charge number
 const double K = z * mu * F;                // Constant for equation
 const double L =  F / eps;	            // Constant for equation
 const double VOLTAGE = 1;	            // [V] Applied voltage
-const double C_CONC = 1200;	            // [mol/m^3] Anion and counterion concentration
+const scalar C_CONC = 1200;	            // [mol/m^3] Anion and counterion concentration
 
 /* For Neumann boundary */
 const double height = 180e-6;	            // [m] thickness of the domain
