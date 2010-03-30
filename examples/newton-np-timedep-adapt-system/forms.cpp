@@ -26,8 +26,7 @@ Scalar Fc_cranic(int n, double *wt, Func<Real> *v, Geom<Real> *e, ExtData<Scalar
 				0.5 * D * (Citer->dx[i] * v->dx[i] + Citer->dy[i] * v->dy[i]) +
         0.5 * D * (Cprev->dx[i] * v->dx[i] + Cprev->dy[i] * v->dy[i]) +
 				0.5 * K * Citer->val[i] * (phiiter->dx[i] * v->dx[i] + phiiter->dy[i] * v->dy[i]) +
-        0.5 * K * Cprev->val[i] * (phiprev->dx[i] * v->dx[i] + phiprev->dy[i] * v->dy[i])
-        );
+        0.5 * K * Cprev->val[i] * (phiprev->dx[i] * v->dx[i] + phiprev->dy[i] * v->dy[i]));
 	}
 	return result;
 }
@@ -38,7 +37,7 @@ Scalar Fphi_euler(int n, double *wt, Func<Real> *v, Geom<Real> *e, ExtData<Scala
 	Func<Scalar>* phiiter = ext->fn[1];
 	for (int i = 0; i < n; i++) {
 		result += wt[i] * ((phiiter->dx[i] * v->dx[i] + phiiter->dy[i] * v->dy[i]) + 
-					L * v->val[i] *(Citer->val[i] -  C_CONC));
+					L * v->val[i] *(-Citer->val[i] + C_CONC));
 	}
 	return result;
 }
