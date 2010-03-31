@@ -4,15 +4,18 @@
 
 // This example shows how to combine the automatic adaptivity with the
 // Newton's method for a nonlinear time-dependent PDE system.
-// The time discretization is done using implicit Euler method.
-// Some problem parameters can be changed below.
+// The time discretization is done using implicit Euler or 
+// Crank Nicholson method (see parameter TIME_DISCR).
 // The following PDE's are solved:
 // Nernst-Planck (describes the diffusion and migration of charged particles):
 // dC/dt - D*div[grad(C)] - K*C*div[grad(phi)]=0
-// Poisson equation (describes the electric field):
-// - div[grad(phi)] = L*(C - C0)
-// The equation variables are phi and C and the system describes the
-// migration/diffusion of charged particles due to electric field.
+// where D and K are constants and C is the cation concentration variable,
+// phi is the voltage variable in the Poisson equation:
+// - div[grad(phi)] = L*(C - C0),
+// where C0, and L are constant (anion concentration). C0 is constant
+// anion concentration in the domain and L is material parameter.
+// So, the equation variables are phi and C and the system describes the
+// migration/diffusion of charged particles due to applied voltage.
 // The simulation domain looks as follows:
 //      2
 //  ____________
@@ -23,12 +26,12 @@
 // For the Nernst-Planck equation, all the boundaries are natural i.e. Neumann.
 // Which basically means that the normal derivative is 0:
 // BC: -D*dC/dn - K*C*dphi/dn = 0
-// For Poisson equation, 1 has natural boundary conditions (electric field
-// derivative is 0). The voltage is applied to the boundaries 2 and 3.
-// However, to make the equations stable, i.e. maintain the charge balance
-// inside the domain, the positive voltages on the boundary 2 must be
-// described by using Neumann boundary. Boundary 3 is an essential boundary, i.e:
-// BC 2: dphi/dn = E_FIELD
+// For Poisson equation, boundary 1 has a natural boundary condition 
+// (electric field derivative is 0). 
+// The voltage is applied to the boundaries 2 and 3 (Dirichlet boundaries)
+// It is possible to adjust system paramter VOLT_BOUNDARY to apply
+// Neumann boundary condition to 2 (instead of Dirichlet). But by default:
+// BC 2: phi = VOLTAGE
 // BC 3: phi = 0
 // BC 1: dphi/dn = 0
 
@@ -53,7 +56,7 @@ const double z = 1;		            // Charge number
 const double K = z * mu * F;                // Constant for equation
 const double L =  F / eps;	            // Constant for equation
 const double VOLTAGE = 1;	            // [V] Applied voltage
-const scalar C_CONC = 1200;	            // [mol/m^3] Anion and counterion concentration
+const scalar C0 = 1200;	            // [mol/m^3] Anion and counterion concentration
 
 /* For Neumann boundary */
 const double height = 180e-6;	            // [m] thickness of the domain
@@ -436,7 +439,7 @@ int main (int argc, char* argv[]) {
   if (TIME_DISCR == 1) {
     wf.add_liform(0, callback(Fc_euler), ANY, 3,
         &C_prev_time, &C_prev_newton, &phi_prev_newton);
-    wf.add_biform(0, 0, callback(J_euler_DFcDYc), UNSYM, ANY, 1, &phi_prev_newton);
+    wf.add_biform(0, 0, callback(J_euler_DFcDYc), UNSYM, ANY, 1, &phi_prev_time);//newton->time test
   } else {
     wf.add_liform(0, callback(Fc_cranic), ANY, 4,
         &C_prev_time, &C_prev_newton, &phi_prev_newton, &phi_prev_time);
@@ -447,7 +450,7 @@ int main (int argc, char* argv[]) {
     wf.add_liform_surf(1, callback(linear_form_surf_top), TOP_MARKER);
   }
   wf.add_biform(1, 1, callback(J_euler_DFphiDYphi), UNSYM);
-  wf.add_biform(0, 1, callback(J_euler_DFcDYphi), UNSYM, ANY, 1, &C_prev_newton);
+  wf.add_biform(0, 1, callback(J_euler_DFcDYphi), UNSYM, ANY, 1, &C_prev_time);//newton->time test
   wf.add_biform(1, 0, callback(J_euler_DFphiDYc), UNSYM);
   wf.add_liform(1, callback(Fphi_euler), ANY, 2, &C_prev_newton, &phi_prev_newton);
 
@@ -462,7 +465,7 @@ int main (int argc, char* argv[]) {
   }
 
   //phi_prev_time.set_dirichlet_lift(&phi, MULTIMESH ? &phi_prev_timess : &C_prev_timess);
-  C_prev_time.set_const(&Cmesh, C_CONC);
+  C_prev_time.set_const(&Cmesh, C0);
   phi_prev_time.set_const(MULTIMESH ? &phimesh : &Cmesh, 0);
 
   C_prev_newton.copy(&C_prev_time);

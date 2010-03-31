@@ -37,7 +37,7 @@ Scalar Fphi_euler(int n, double *wt, Func<Real> *v, Geom<Real> *e, ExtData<Scala
 	Func<Scalar>* phiiter = ext->fn[1];
 	for (int i = 0; i < n; i++) {
 		result += wt[i] * ((phiiter->dx[i] * v->dx[i] + phiiter->dy[i] * v->dy[i]) - 
-					L * v->val[i] * (C_CONC - Citer->val[i]));
+					L * v->val[i] * (C0 - Citer->val[i]));
 	}
 	return result;
 }
