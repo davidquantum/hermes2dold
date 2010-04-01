@@ -41,8 +41,6 @@
 #define BOT_MARKER 3
 
 // Parameters to tweak the amount of output to the console
-#define VERBOSE
-#define NONCONT_OUTPUT
 #define NOSCREENSHOT
 
 /*** Fundamental coefficients ***/
@@ -140,59 +138,30 @@ Scalar linear_form_surf_top(int n, double *wt, Func<Real> *v, Geom<Real> *e, Ext
 
 /** Nonadaptive solver.*/
 void solveNonadaptive(Mesh &mesh, NonlinSystem &nls,
-    Solution &Cprev, Solution &Citer, Solution &phiprev, Solution &phiiter) {
+    Solution &C_prev_time, Solution &C_prev_newton,
+    Solution &phi_prev_time, Solution &phi_prev_newton) {
+
   begin_time();
 
   //VectorView vview("electric field [V/m]", 0, 0, 600, 600);
   ScalarView Cview("Concentration [mol/m3]", 0, 0, 800, 800);
   ScalarView phiview("Voltage [V]", 650, 0, 600, 600);
+  char title[100];
 
-  #ifdef CONT_OUTPUT
-  phiview.show(&phiiter);
-  Cview.show(&Citer);
-  Cview.wait_for_keypress();
-  #endif
-
-  Solution Csln, phisln;
   for (int n = 1; n <= NSTEP; n++) {
+    verbose("\n---- Time step %d ----", n);
+    if (!nls.solve_newton_2(&C_prev_newton, &phi_prev_newton,
+         NEWTON_TOL, NEWTON_MAX_ITER)) error("Newton's method did not converge.");
 
-    #ifdef VERBOSE
-    info("\n---- Time step %d ----", n);
-    #endif
-
-    int it = 1;
-    double res_l2_norm;
-
-    do {
-
-      #ifdef VERBOSE
-      info("\n -------- Time step %d, Newton iter %d --------\n", n, it);
-      #endif
-      it++;
-      nls.assemble();
-      nls.solve(2, &Csln, &phisln);
-      res_l2_norm = nls.get_residuum_l2_norm();
-
-      #ifdef VERBOSE
-      info("Residuum L2 norm: %g\n", res_l2_norm);
-      #endif
-
-      Citer.copy(&Csln);
-      phiiter.copy(&phisln);
-
-    } while (res_l2_norm > NEWTON_TOL);
-    #ifdef CONT_OUTPUT
-    phiview.show(&phiiter);
-    Cview.show(&Citer);
-    #endif
-    phiprev.copy(&phiiter);
-    Cprev.copy(&Citer);
+    sprintf(title, "Solution, timestep = %i", n);
+    phiview.set_title(title);
+    phiview.show(&phi_prev_newton);
+    Cview.set_title(title);
+    Cview.show(&C_prev_newton);
+    phi_prev_time.copy(&phi_prev_newton);
+    C_prev_time.copy(&C_prev_newton);
   }
   verbose("\nTotal run time: %g sec", end_time());
-  Cview.show(&Citer);
-  phiview.show(&phiiter);
-  //MeshView mview("small.mesh", 100, 30, 800, 800);
-  //mview.show(&mesh);
   View::wait();
 }
 
