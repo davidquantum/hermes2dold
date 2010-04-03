@@ -361,9 +361,9 @@ int main (int argc, char* argv[]) {
   H2DReader mloader;
   mloader.load("small.mesh", &basemesh);
   basemesh.refine_towards_boundary(TOP_MARKER, 
-      adaptive ? REF_INIT : REF_INIT * 10);
+      adaptive ? REF_INIT : REF_INIT * 20);
   basemesh.refine_towards_boundary(BOT_MARKER, 
-    adaptive ? REF_INIT - 1 : (REF_INIT * 10) - 1);
+    adaptive ? REF_INIT - 1 : (REF_INIT * 20) - 1);
   Cmesh.copy(&basemesh);
   phimesh.copy(&basemesh);
 
